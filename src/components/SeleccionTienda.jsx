@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import Slider from './Slider';
+import Footer from './Footer';
 
 export default function SeleccionTienda({ onSeleccionar }) {
   const [tiendas, setTiendas] = useState([]);
@@ -146,6 +147,8 @@ export default function SeleccionTienda({ onSeleccionar }) {
           </div>
         )}
       </div>
+
+      <Footer />
     </div>
   );
 }

@@ -1,10 +1,30 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import Slider from './Slider';
 
 export default function SeleccionTienda({ onSeleccionar }) {
   const [tiendas, setTiendas] = useState([]);
   const [cargando, setCargando] = useState(true);
+
+  // Slides para el carrusel
+  const slides = [
+    {
+      imagen: 'https://jfxmovtppqilxrsmmnw.supabase.co/storage/v1/object/public/imagenes/slider/slide1.jpg',
+      titulo: '50 Años de Tradición',
+      subtitulo: 'Helados artesanales desde 1975'
+    },
+    {
+      imagen: 'https://jfxmovtppqilxrsmmnw.supabase.co/storage/v1/object/public/imagenes/slider/slide2.jpg',
+      titulo: 'Los Mejores Sabores',
+      subtitulo: 'Más de 40 sabores para elegir'
+    },
+    {
+      imagen: 'https://jfxmovtppqilxrsmmnw.supabase.co/storage/v1/object/public/imagenes/slider/slide3.jpg',
+      titulo: 'Cremoladas Únicas',
+      subtitulo: 'Refréscate con nuestras cremoladas'
+    }
+  ];
 
   useEffect(() => {
     cargarTiendas();
@@ -38,6 +58,11 @@ export default function SeleccionTienda({ onSeleccionar }) {
           </nav>
         </div>
       </header>
+
+      {/* Slider */}
+      <div className="container mx-auto px-4 py-6">
+        <Slider imagenes={slides} autoPlay={true} intervalo={5000} />
+      </div>
 
       {/* Titulo */}
       <div className="text-center py-8">

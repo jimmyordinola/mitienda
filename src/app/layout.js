@@ -4,6 +4,9 @@ export const metadata = {
   title: 'El Chalán - Heladería',
   description: 'Sistema de fidelización de puntos - Heladería El Chalán',
   manifest: '/manifest.json',
+};
+
+export const viewport = {
   themeColor: '#4a9b8c',
 };
 

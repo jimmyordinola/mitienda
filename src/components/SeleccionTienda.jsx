@@ -6,30 +6,24 @@ import Footer from './Footer';
 
 export default function SeleccionTienda({ onSeleccionar }) {
   const [tiendas, setTiendas] = useState([]);
+  const [banners, setBanners] = useState([]);
   const [cargando, setCargando] = useState(true);
-
-  // Slides para el carrusel
-  const slides = [
-    {
-      imagen: 'https://jfxmovtppqilxrsmmnw.supabase.co/storage/v1/object/public/imagenes/slider/slide1.jpg',
-      titulo: '50 Años de Tradición',
-      subtitulo: 'Helados artesanales desde 1975'
-    },
-    {
-      imagen: 'https://jfxmovtppqilxrsmmnw.supabase.co/storage/v1/object/public/imagenes/slider/slide2.jpg',
-      titulo: 'Los Mejores Sabores',
-      subtitulo: 'Más de 40 sabores para elegir'
-    },
-    {
-      imagen: 'https://jfxmovtppqilxrsmmnw.supabase.co/storage/v1/object/public/imagenes/slider/slide3.jpg',
-      titulo: 'Cremoladas Únicas',
-      subtitulo: 'Refréscate con nuestras cremoladas'
-    }
-  ];
 
   useEffect(() => {
     cargarTiendas();
+    cargarBanners();
   }, []);
+
+  const cargarBanners = async () => {
+    try {
+      const res = await fetch('/api/banners');
+      const data = await res.json();
+      setBanners(Array.isArray(data) ? data : []);
+    } catch (e) {
+      console.error('Error cargando banners');
+      setBanners([]);
+    }
+  };
 
   const cargarTiendas = async () => {
     try {
@@ -61,9 +55,11 @@ export default function SeleccionTienda({ onSeleccionar }) {
       </header>
 
       {/* Slider */}
-      <div className="container mx-auto px-4 py-6">
-        <Slider imagenes={slides} autoPlay={true} intervalo={5000} />
-      </div>
+      {banners.length > 0 && (
+        <div className="container mx-auto px-4 py-6">
+          <Slider imagenes={banners} autoPlay={true} intervalo={5000} />
+        </div>
+      )}
 
       {/* Titulo */}
       <div className="text-center py-8">

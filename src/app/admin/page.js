@@ -236,6 +236,7 @@ export default function AdminPage() {
                 { id: 'toppings', nombre: 'Toppings', emoji: '🍫' },
                 { id: 'promociones', nombre: 'Promociones', emoji: '🎉' },
                 { id: 'cupones', nombre: 'Cupones', emoji: '🎟️' },
+                { id: 'banners', nombre: 'Banners', emoji: '🖼️' },
                 { id: 'tiendas', nombre: 'Tiendas', emoji: '🏪' },
               ].map((item) => (
                 <button
@@ -359,6 +360,8 @@ export default function AdminPage() {
                         {seccion === 'cupones' && <th className="text-left py-3 px-4">Codigo</th>}
                         {seccion === 'cupones' && <th className="text-left py-3 px-4">Valor</th>}
                         {seccion === 'promociones' && <th className="text-left py-3 px-4">Tipo</th>}
+                        {seccion === 'banners' && <th className="text-left py-3 px-4">Imagen</th>}
+                        {seccion === 'banners' && <th className="text-left py-3 px-4">Orden</th>}
                         <th className="text-left py-3 px-4">Estado</th>
                         <th className="text-left py-3 px-4">Acciones</th>
                       </tr>
@@ -408,6 +411,16 @@ export default function AdminPage() {
                           )}
                           {seccion === 'promociones' && (
                             <td className="py-3 px-4">{item.tipo}</td>
+                          )}
+                          {seccion === 'banners' && (
+                            <td className="py-3 px-4">
+                              {item.imagen && (
+                                <img src={item.imagen} alt="" className="w-16 h-10 object-cover rounded" />
+                              )}
+                            </td>
+                          )}
+                          {seccion === 'banners' && (
+                            <td className="py-3 px-4">{item.orden}</td>
                           )}
                           <td className="py-3 px-4">
                             <span className={`px-2 py-1 rounded text-xs font-medium ${
@@ -578,6 +591,14 @@ function ModalEdicion({ seccion, item, categorias, tiendas, onGuardar, onCerrar 
       { name: 'tienda_id', label: 'Tienda (vacio = todas)', type: 'tienda_select' },
       { name: 'fecha_inicio', label: 'Fecha Inicio', type: 'date' },
       { name: 'fecha_fin', label: 'Fecha Fin', type: 'date' },
+      { name: 'activo', label: 'Activo', type: 'checkbox' },
+    ],
+    banners: [
+      { name: 'titulo', label: 'Título', type: 'text' },
+      { name: 'subtitulo', label: 'Subtítulo', type: 'text' },
+      { name: 'imagen', label: 'Imagen', type: 'image_upload', required: true },
+      { name: 'url_destino', label: 'URL de destino (opcional)', type: 'text' },
+      { name: 'orden', label: 'Orden', type: 'number' },
       { name: 'activo', label: 'Activo', type: 'checkbox' },
     ],
     tiendas: [

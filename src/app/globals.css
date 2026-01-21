@@ -1,0 +1,47 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --primary: #4a9b8c;
+  --primary-dark: #3d8577;
+  --brown: #3d2314;
+  --brown-light: #5c3a2d;
+  --cream: #f5f0e8;
+  --red: #c53030;
+}
+
+body {
+  min-height: 100vh;
+  font-family: 'Segoe UI', system-ui, sans-serif;
+}
+
+.bg-chalan {
+  background-color: #4a9b8c;
+}
+
+.bg-chalan-dark {
+  background-color: #3d2314;
+}
+
+.text-chalan {
+  color: #4a9b8c;
+}
+
+.text-chalan-brown {
+  color: #3d2314;
+}
+
+.btn-chalan {
+  background-color: #c53030;
+  color: white;
+  padding: 12px 24px;
+  border-radius: 8px;
+  font-weight: 600;
+  transition: all 0.2s;
+}
+
+.btn-chalan:hover {
+  background-color: #9b2c2c;
+  transform: scale(1.02);
+}

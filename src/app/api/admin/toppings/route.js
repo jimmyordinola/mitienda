@@ -1,0 +1,82 @@
+import { NextResponse } from 'next/server';
+import { supabase } from '@/lib/db';
+
+// GET - Obtener toppings
+export async function GET(request) {
+  const { searchParams } = new URL(request.url);
+  const tienda_id = searchParams.get('tienda_id');
+  const categoria_id = searchParams.get('categoria_id');
+
+  let query = supabase
+    .from('toppings')
+    .select('*')
+    .order('orden', { ascending: true });
+
+  if (tienda_id) {
+    query = query.or(`tienda_id.eq.${tienda_id},tienda_id.is.null`);
+  }
+
+  if (categoria_id) {
+    query = query.or(`categoria_id.eq.${categoria_id},categoria_id.is.null`);
+  }
+
+  const { data, error } = await query;
+
+  if (error) {
+    return NextResponse.json({ error: error.message }, { status: 500 });
+  }
+
+  return NextResponse.json(data);
+}
+
+// POST - Crear topping
+export async function POST(request) {
+  const topping = await request.json();
+
+  const { data, error } = await supabase
+    .from('toppings')
+    .insert([topping])
+    .select()
+    .single();
+
+  if (error) {
+    return NextResponse.json({ error: error.message }, { status: 500 });
+  }
+
+  return NextResponse.json(data);
+}
+
+// PUT - Actualizar topping
+export async function PUT(request) {
+  const { id, ...topping } = await request.json();
+
+  const { data, error } = await supabase
+    .from('toppings')
+    .update(topping)
+    .eq('id', id)
+    .select()
+    .single();
+
+  if (error) {
+    return NextResponse.json({ error: error.message }, { status: 500 });
+  }
+
+  return NextResponse.json(data);
+}
+
+// DELETE - Eliminar topping
+export async function DELETE(request) {
+  const { searchParams } = new URL(request.url);
+  const id = searchParams.get('id');
+
+  const { error } = await supabase
+    .from('toppings')
+    .delete()
+    .eq('id', id);
+
+  if (error) {
+    return NextResponse.json({ error: error.message }, { status: 500 });
+  }
+
+  return NextResponse.json({ success: true });
+}

@@ -618,6 +618,29 @@ function ModalEdicion({ seccion, item, categorias, tiendas, onGuardar, onCerrar 
   };
   const [formData, setFormData] = useState(item?.id ? item : { ...defaultValues, ...item });
   const [subiendo, setSubiendo] = useState(false);
+  const [tiendasSeleccionadas, setTiendasSeleccionadas] = useState([]);
+
+  // Cargar tiendas asignadas al producto si estamos editando
+  useEffect(() => {
+    if (seccion === 'productos' && item?.id) {
+      fetch(`/api/admin/productos-tiendas?producto_id=${item.id}`)
+        .then(res => res.json())
+        .then(data => {
+          if (Array.isArray(data)) {
+            setTiendasSeleccionadas(data.map(pt => pt.tienda_id));
+          }
+        })
+        .catch(() => setTiendasSeleccionadas([]));
+    }
+  }, [seccion, item?.id]);
+
+  const toggleTienda = (tiendaId) => {
+    setTiendasSeleccionadas(prev =>
+      prev.includes(tiendaId)
+        ? prev.filter(id => id !== tiendaId)
+        : [...prev, tiendaId]
+    );
+  };
 
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
@@ -659,13 +682,19 @@ function ModalEdicion({ seccion, item, categorias, tiendas, onGuardar, onCerrar 
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    // Para productos, agregar el nombre de categoría al campo 'categoria'
-    if (seccion === 'productos' && formData.categoria_id) {
-      const cat = categorias.find(c => c.id === Number(formData.categoria_id));
-      if (cat) {
-        onGuardar({ ...formData, categoria: cat.nombre });
+    // Para productos, agregar el nombre de categoría y las tiendas seleccionadas
+    if (seccion === 'productos') {
+      if (tiendasSeleccionadas.length === 0) {
+        alert('Debe seleccionar al menos una tienda');
         return;
       }
+      const cat = categorias.find(c => c.id === Number(formData.categoria_id));
+      onGuardar({
+        ...formData,
+        categoria: cat?.nombre || '',
+        tiendas_ids: tiendasSeleccionadas
+      });
+      return;
     }
     onGuardar(formData);
   };
@@ -675,7 +704,7 @@ function ModalEdicion({ seccion, item, categorias, tiendas, onGuardar, onCerrar 
       { name: 'nombre', label: 'Nombre', type: 'text', required: true },
       { name: 'descripcion', label: 'Descripcion', type: 'textarea' },
       { name: 'precio', label: 'Precio', type: 'number', required: true },
-      { name: 'tienda_id', label: 'Tienda', type: 'tienda_select', required: true },
+      { name: 'tiendas_ids', label: 'Tiendas', type: 'tiendas_multi_select', required: true },
       { name: 'categoria_id', label: 'Categoria', type: 'categoria_select', required: true },
       { name: 'imagen', label: 'Emoji (alternativo)', type: 'text' },
       { name: 'imagen_url', label: 'Imagen', type: 'image_upload' },
@@ -801,6 +830,32 @@ function ModalEdicion({ seccion, item, categorias, tiendas, onGuardar, onCerrar 
                         <option key={opt} value={opt}>{opt}</option>
                       ))}
                     </select>
+                  ) : campo.type === 'tiendas_multi_select' ? (
+                    <div className="border-2 rounded-lg p-3 max-h-48 overflow-y-auto">
+                      {tiendas.length === 0 ? (
+                        <p className="text-gray-500 text-sm">No hay tiendas disponibles</p>
+                      ) : (
+                        <div className="space-y-2">
+                          {tiendas.map((t) => (
+                            <label key={t.id} className="flex items-center gap-2 cursor-pointer hover:bg-gray-50 p-1 rounded">
+                              <input
+                                type="checkbox"
+                                checked={tiendasSeleccionadas.includes(t.id)}
+                                onChange={() => toggleTienda(t.id)}
+                                className="w-4 h-4 accent-[#4a9b8c]"
+                              />
+                              <span className="text-sm">{t.nombre}</span>
+                              {t.direccion && <span className="text-xs text-gray-400">- {t.direccion}</span>}
+                            </label>
+                          ))}
+                        </div>
+                      )}
+                      {tiendasSeleccionadas.length > 0 && (
+                        <p className="text-xs text-[#4a9b8c] mt-2 pt-2 border-t">
+                          {tiendasSeleccionadas.length} tienda(s) seleccionada(s)
+                        </p>
+                      )}
+                    </div>
                   ) : campo.type === 'tienda_select' ? (
                     <select
                       name={campo.name}

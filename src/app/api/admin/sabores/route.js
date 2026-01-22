@@ -31,7 +31,7 @@ export async function GET(request) {
 
 // POST - Crear sabor
 export async function POST(request) {
-  const sabor = await request.json();
+  const { disponible, ...sabor } = await request.json();
 
   const { data, error } = await supabase
     .from('sabores')
@@ -48,7 +48,7 @@ export async function POST(request) {
 
 // PUT - Actualizar sabor
 export async function PUT(request) {
-  const { id, ...sabor } = await request.json();
+  const { id, disponible, ...sabor } = await request.json();
 
   const { data, error } = await supabase
     .from('sabores')

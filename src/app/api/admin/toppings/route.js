@@ -31,7 +31,7 @@ export async function GET(request) {
 
 // POST - Crear topping
 export async function POST(request) {
-  const topping = await request.json();
+  const { disponible, ...topping } = await request.json();
 
   const { data, error } = await supabase
     .from('toppings')
@@ -48,7 +48,7 @@ export async function POST(request) {
 
 // PUT - Actualizar topping
 export async function PUT(request) {
-  const { id, ...topping } = await request.json();
+  const { id, disponible, ...topping } = await request.json();
 
   const { data, error } = await supabase
     .from('toppings')

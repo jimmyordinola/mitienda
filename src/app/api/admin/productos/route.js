@@ -23,7 +23,7 @@ export async function GET(request) {
 
 // POST - Crear producto
 export async function POST(request) {
-  const producto = await request.json();
+  const { activo, categorias, ...producto } = await request.json();
 
   const { data, error } = await supabase
     .from('productos')
@@ -40,7 +40,7 @@ export async function POST(request) {
 
 // PUT - Actualizar producto
 export async function PUT(request) {
-  const { id, categorias, ...producto } = await request.json();
+  const { id, activo, categorias, ...producto } = await request.json();
 
   const { data, error } = await supabase
     .from('productos')

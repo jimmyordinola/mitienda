@@ -151,20 +151,20 @@ export default function Catalogo({ onAgregarCarrito, tiendaId }) {
     );
   }
 
-  // Vista principal: Promociones, Más pedido, Categorías
+  // Vista principal: Promociones, Categorías, Más pedido
   return (
     <div className="bg-white rounded-2xl p-6 shadow-xl">
       <Promociones
         tiendaId={tiendaId}
         onSeleccionarCategoria={handleSeleccionarCategoria}
       />
-      <MasPedido
-        tiendaId={tiendaId}
-        onSeleccionar={(producto) => handleAgregar(producto)}
-      />
       <Categorias
         tiendaId={tiendaId}
         onSeleccionar={handleSeleccionarCategoria}
+      />
+      <MasPedido
+        tiendaId={tiendaId}
+        onSeleccionar={(producto) => handleAgregar(producto)}
       />
     </div>
   );

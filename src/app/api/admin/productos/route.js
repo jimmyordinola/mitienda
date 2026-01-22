@@ -6,7 +6,7 @@ export async function GET(request) {
   const { searchParams } = new URL(request.url);
   const tienda_id = searchParams.get('tienda_id');
 
-  let query = supabase.from('productos').select('*, categorias(nombre)').order('categoria').order('nombre');
+  let query = supabase.from('productos').select('*, categorias(nombre)').order('categoria_id').order('nombre');
 
   if (tienda_id) {
     query = query.eq('tienda_id', tienda_id);
@@ -40,7 +40,7 @@ export async function POST(request) {
 
 // PUT - Actualizar producto
 export async function PUT(request) {
-  const { id, ...producto } = await request.json();
+  const { id, categorias, ...producto } = await request.json();
 
   const { data, error } = await supabase
     .from('productos')

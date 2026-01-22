@@ -17,7 +17,7 @@ export async function GET() {
 
 // POST - Crear categoría
 export async function POST(request) {
-  const categoria = await request.json();
+  const { disponible, ...categoria } = await request.json();
 
   const { data, error } = await supabase
     .from('categorias')
@@ -34,7 +34,7 @@ export async function POST(request) {
 
 // PUT - Actualizar categoría
 export async function PUT(request) {
-  const { id, ...categoria } = await request.json();
+  const { id, disponible, ...categoria } = await request.json();
 
   const { data, error } = await supabase
     .from('categorias')

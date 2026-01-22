@@ -31,7 +31,7 @@ export async function GET(request) {
 
 // POST - Crear sabor
 export async function POST(request) {
-  const { disponible, ...sabor } = await request.json();
+  const { disponible, tiendas_ids, tienda_id, ...sabor } = await request.json();
 
   const { data, error } = await supabase
     .from('sabores')
@@ -43,12 +43,22 @@ export async function POST(request) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
+  // Asignar sabor a las tiendas seleccionadas
+  if (tiendas_ids && tiendas_ids.length > 0) {
+    const asignaciones = tiendas_ids.map(tid => ({
+      sabor_id: data.id,
+      tienda_id: tid,
+      disponible: true
+    }));
+    await supabase.from('sabores_tiendas').insert(asignaciones);
+  }
+
   return NextResponse.json(data);
 }
 
 // PUT - Actualizar sabor
 export async function PUT(request) {
-  const { id, disponible, ...sabor } = await request.json();
+  const { id, disponible, tiendas_ids, tienda_id, ...sabor } = await request.json();
 
   const { data, error } = await supabase
     .from('sabores')
@@ -59,6 +69,22 @@ export async function PUT(request) {
 
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });
+  }
+
+  // Actualizar asignaciones de tiendas
+  if (tiendas_ids) {
+    // Eliminar asignaciones existentes
+    await supabase.from('sabores_tiendas').delete().eq('sabor_id', id);
+
+    // Crear nuevas asignaciones
+    if (tiendas_ids.length > 0) {
+      const asignaciones = tiendas_ids.map(tid => ({
+        sabor_id: id,
+        tienda_id: tid,
+        disponible: true
+      }));
+      await supabase.from('sabores_tiendas').insert(asignaciones);
+    }
   }
 
   return NextResponse.json(data);

@@ -515,7 +515,7 @@ export default function AdminPage() {
                         {seccion === 'productos' && <th className="text-left py-3 px-4">Categoria</th>}
                         {seccion === 'productos' && <th className="text-left py-3 px-4">Personal.</th>}
                         {seccion === 'toppings' && <th className="text-left py-3 px-4">Precio</th>}
-                        {(seccion === 'productos' || seccion === 'promociones' || seccion === 'cupones' || seccion === 'sabores' || seccion === 'toppings') && <th className="text-left py-3 px-4">Tienda</th>}
+                        {(seccion === 'productos' || seccion === 'promociones' || seccion === 'cupones') && <th className="text-left py-3 px-4">Tienda</th>}
                         {seccion === 'cupones' && <th className="text-left py-3 px-4">Codigo</th>}
                         {seccion === 'cupones' && <th className="text-left py-3 px-4">Valor</th>}
                         {seccion === 'promociones' && <th className="text-left py-3 px-4">Tipo</th>}
@@ -553,7 +553,7 @@ export default function AdminPage() {
                           {seccion === 'toppings' && (
                             <td className="py-3 px-4">+S/{item.precio || 0}</td>
                           )}
-                          {(seccion === 'productos' || seccion === 'promociones' || seccion === 'cupones' || seccion === 'sabores' || seccion === 'toppings') && (
+                          {(seccion === 'productos' || seccion === 'promociones' || seccion === 'cupones') && (
                             <td className="py-3 px-4">
                               <span className={`px-2 py-1 rounded text-xs ${item.tienda_id ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-600'}`}>
                                 {tiendaNombre}
@@ -650,21 +650,41 @@ function ModalEdicion({ seccion, item, categorias, tiendas, onGuardar, onCerrar 
   const [tiendasSeleccionadas, setTiendasSeleccionadas] = useState([]);
   const [tiendasDestacadas, setTiendasDestacadas] = useState([]);
 
-  // Cargar tiendas asignadas al producto si estamos editando
+  // Cargar tiendas asignadas si estamos editando
   useEffect(() => {
-    if (seccion === 'productos' && item?.id) {
-      fetch(`/api/admin/productos-tiendas?producto_id=${item.id}`)
-        .then(res => res.json())
-        .then(data => {
-          if (Array.isArray(data)) {
-            setTiendasSeleccionadas(data.map(pt => pt.tienda_id));
-            setTiendasDestacadas(data.filter(pt => pt.destacado).map(pt => pt.tienda_id));
-          }
-        })
-        .catch(() => {
-          setTiendasSeleccionadas([]);
-          setTiendasDestacadas([]);
-        });
+    if (item?.id) {
+      if (seccion === 'productos') {
+        fetch(`/api/admin/productos-tiendas?producto_id=${item.id}`)
+          .then(res => res.json())
+          .then(data => {
+            if (Array.isArray(data)) {
+              setTiendasSeleccionadas(data.map(pt => pt.tienda_id));
+              setTiendasDestacadas(data.filter(pt => pt.destacado).map(pt => pt.tienda_id));
+            }
+          })
+          .catch(() => {
+            setTiendasSeleccionadas([]);
+            setTiendasDestacadas([]);
+          });
+      } else if (seccion === 'sabores') {
+        fetch(`/api/admin/sabores-tiendas?sabor_id=${item.id}`)
+          .then(res => res.json())
+          .then(data => {
+            if (Array.isArray(data)) {
+              setTiendasSeleccionadas(data.map(st => st.tienda_id));
+            }
+          })
+          .catch(() => setTiendasSeleccionadas([]));
+      } else if (seccion === 'toppings') {
+        fetch(`/api/admin/toppings-tiendas?topping_id=${item.id}`)
+          .then(res => res.json())
+          .then(data => {
+            if (Array.isArray(data)) {
+              setTiendasSeleccionadas(data.map(tt => tt.tienda_id));
+            }
+          })
+          .catch(() => setTiendasSeleccionadas([]));
+      }
     }
   }, [seccion, item?.id]);
 
@@ -742,6 +762,14 @@ function ModalEdicion({ seccion, item, categorias, tiendas, onGuardar, onCerrar 
       });
       return;
     }
+    // Para sabores y toppings, agregar tiendas_ids (puede estar vacío = global)
+    if (seccion === 'sabores' || seccion === 'toppings') {
+      onGuardar({
+        ...formData,
+        tiendas_ids: tiendasSeleccionadas
+      });
+      return;
+    }
     onGuardar(formData);
   };
 
@@ -765,7 +793,7 @@ function ModalEdicion({ seccion, item, categorias, tiendas, onGuardar, onCerrar 
       { name: 'nombre', label: 'Nombre', type: 'text', required: true },
       { name: 'imagen', label: 'Imagen', type: 'image_upload' },
       { name: 'color', label: 'Color (hex)', type: 'text' },
-      { name: 'tienda_id', label: 'Tienda (vacio = todas)', type: 'tienda_select' },
+      { name: 'tiendas_ids', label: 'Tiendas (vacio = todas)', type: 'tiendas_multi_select_simple' },
       { name: 'categoria_id', label: 'Categoria (vacio = todas)', type: 'categoria_select' },
       { name: 'orden', label: 'Orden', type: 'number' },
       { name: 'activo', label: 'Activo', type: 'checkbox' },
@@ -774,7 +802,7 @@ function ModalEdicion({ seccion, item, categorias, tiendas, onGuardar, onCerrar 
       { name: 'nombre', label: 'Nombre', type: 'text', required: true },
       { name: 'imagen', label: 'Imagen', type: 'image_upload' },
       { name: 'precio', label: 'Precio adicional', type: 'number', required: true },
-      { name: 'tienda_id', label: 'Tienda (vacio = todas)', type: 'tienda_select' },
+      { name: 'tiendas_ids', label: 'Tiendas (vacio = todas)', type: 'tiendas_multi_select_simple' },
       { name: 'categoria_id', label: 'Categoria (vacio = todas)', type: 'categoria_select' },
       { name: 'orden', label: 'Orden', type: 'number' },
       { name: 'activo', label: 'Activo', type: 'checkbox' },
@@ -912,6 +940,35 @@ function ModalEdicion({ seccion, item, categorias, tiendas, onGuardar, onCerrar 
                       {tiendasSeleccionadas.length > 0 && (
                         <p className="text-xs text-[#4a9b8c] mt-2 pt-2 border-t">
                           {tiendasSeleccionadas.length} tienda(s) · {tiendasDestacadas.length} destacada(s)
+                        </p>
+                      )}
+                    </div>
+                  ) : campo.type === 'tiendas_multi_select_simple' ? (
+                    <div className="border-2 rounded-lg p-3 max-h-56 overflow-y-auto">
+                      <p className="text-xs text-gray-500 mb-2">Marca las tiendas (vacío = todas)</p>
+                      {tiendas.length === 0 ? (
+                        <p className="text-gray-500 text-sm">No hay tiendas disponibles</p>
+                      ) : (
+                        <div className="space-y-1">
+                          {tiendas.map((t) => {
+                            const seleccionada = tiendasSeleccionadas.includes(t.id);
+                            return (
+                              <div key={t.id} className={`flex items-center gap-2 p-2 rounded ${seleccionada ? 'bg-[#4a9b8c]/10' : 'hover:bg-gray-50'}`}>
+                                <input
+                                  type="checkbox"
+                                  checked={seleccionada}
+                                  onChange={() => toggleTienda(t.id)}
+                                  className="w-4 h-4 accent-[#4a9b8c]"
+                                />
+                                <span className="text-sm flex-1">{t.nombre}</span>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      )}
+                      {tiendasSeleccionadas.length > 0 && (
+                        <p className="text-xs text-[#4a9b8c] mt-2 pt-2 border-t">
+                          {tiendasSeleccionadas.length} tienda(s) seleccionada(s)
                         </p>
                       )}
                     </div>

@@ -1,7 +1,8 @@
 'use client';
 
 export default function Carrito({ items, onActualizar, onEliminar, onCheckout }) {
-  const total = items.reduce((sum, item) => sum + (item.precio * item.cantidad), 0);
+  // Usar precioFinal si existe (incluye toppings), sino precio base
+  const total = items.reduce((sum, item) => sum + ((item.precioFinal || item.precio) * item.cantidad), 0);
   const puntosGanar = Math.floor(total / 10);
 
   if (items.length === 0) {
@@ -24,10 +25,19 @@ export default function Carrito({ items, onActualizar, onEliminar, onCheckout })
       <div className="space-y-3 mb-4 max-h-72 overflow-y-auto">
         {items.map((item) => (
           <div key={item.id} className="flex items-center gap-3 p-3 bg-[#f5f0e8] rounded-xl">
-            <span className="text-2xl">{item.imagen}</span>
-            <div className="flex-1">
-              <h4 className="font-semibold text-[#3d2314]">{item.nombre}</h4>
-              <p className="text-sm text-[#4a9b8c] font-bold">S/{item.precio}</p>
+            {/* Imagen del producto */}
+            {item.imagen_url ? (
+              <img src={item.imagen_url} alt={item.nombre} className="w-12 h-12 rounded-lg object-cover" />
+            ) : (
+              <span className="text-2xl">{item.imagen || '🍦'}</span>
+            )}
+            <div className="flex-1 min-w-0">
+              <h4 className="font-semibold text-[#3d2314] truncate">{item.nombre}</h4>
+              {/* Mostrar sabores y toppings si existen */}
+              {item.descripcionPersonalizada && (
+                <p className="text-xs text-gray-500 truncate">{item.descripcionPersonalizada}</p>
+              )}
+              <p className="text-sm text-[#4a9b8c] font-bold">S/{(item.precioFinal || item.precio).toFixed(2)}</p>
             </div>
             <div className="flex items-center gap-2">
               <button

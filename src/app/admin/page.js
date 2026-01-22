@@ -480,7 +480,13 @@ export default function AdminPage() {
 
 // Componente Modal
 function ModalEdicion({ seccion, item, categorias, tiendas, onGuardar, onCerrar }) {
-  const [formData, setFormData] = useState(item || {});
+  // Valores por defecto para nuevos items
+  const defaultValues = {
+    activo: true,
+    disponible: true,
+    orden: 0
+  };
+  const [formData, setFormData] = useState(item?.id ? item : { ...defaultValues, ...item });
   const [subiendo, setSubiendo] = useState(false);
 
   const handleChange = (e) => {

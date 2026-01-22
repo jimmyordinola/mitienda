@@ -1,7 +1,6 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import Promociones from './Promociones';
 import MasPedido from './MasPedido';
 import Categorias from './Categorias';
 import ModalPersonalizacion from './ModalPersonalizacion';
@@ -151,13 +150,9 @@ export default function Catalogo({ onAgregarCarrito, tiendaId }) {
     );
   }
 
-  // Vista principal: Promociones, Categorías, Más pedido
+  // Vista principal: Categorías, Más pedido
   return (
     <div className="bg-white rounded-2xl p-6 shadow-xl">
-      <Promociones
-        tiendaId={tiendaId}
-        onSeleccionarCategoria={handleSeleccionarCategoria}
-      />
       <Categorias
         tiendaId={tiendaId}
         onSeleccionar={handleSeleccionarCategoria}

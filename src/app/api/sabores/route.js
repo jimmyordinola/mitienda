@@ -29,28 +29,23 @@ export async function GET(request) {
     return NextResponse.json(allSabores || []);
   }
 
-  // Obtener los sabores asignados a esta tienda desde la tabla junction
+  // Obtener solo los sabores asignados a esta tienda desde la tabla junction
   const { data: asignaciones } = await supabase
     .from('sabores_tiendas')
     .select('sabor_id')
     .eq('tienda_id', tienda_id)
     .eq('disponible', true);
 
-  const saboresAsignadosIds = new Set((asignaciones || []).map(a => a.sabor_id));
+  if (!asignaciones || asignaciones.length === 0) {
+    return NextResponse.json([]);
+  }
 
-  // Obtener todos los sabores que tienen alguna asignación (para saber cuáles son globales)
-  const { data: todasAsignaciones } = await supabase
-    .from('sabores_tiendas')
-    .select('sabor_id');
+  const saboresAsignadosIds = new Set(asignaciones.map(a => a.sabor_id));
 
-  const saboresConAsignacion = new Set((todasAsignaciones || []).map(a => a.sabor_id));
-
-  // Filtrar: incluir sabores asignados a esta tienda O sabores sin ninguna asignación (globales)
-  const saboresFiltrados = (allSabores || []).filter(sabor => {
-    const estaAsignadoATienda = saboresAsignadosIds.has(sabor.id);
-    const esGlobal = !saboresConAsignacion.has(sabor.id);
-    return estaAsignadoATienda || esGlobal;
-  });
+  // Filtrar: solo mostrar sabores asignados a esta tienda
+  const saboresFiltrados = (allSabores || []).filter(sabor =>
+    saboresAsignadosIds.has(sabor.id)
+  );
 
   return NextResponse.json(saboresFiltrados);
 }

@@ -29,28 +29,23 @@ export async function GET(request) {
     return NextResponse.json(allToppings || []);
   }
 
-  // Obtener los toppings asignados a esta tienda desde la tabla junction
+  // Obtener solo los toppings asignados a esta tienda desde la tabla junction
   const { data: asignaciones } = await supabase
     .from('toppings_tiendas')
     .select('topping_id')
     .eq('tienda_id', tienda_id)
     .eq('disponible', true);
 
-  const toppingsAsignadosIds = new Set((asignaciones || []).map(a => a.topping_id));
+  if (!asignaciones || asignaciones.length === 0) {
+    return NextResponse.json([]);
+  }
 
-  // Obtener todos los toppings que tienen alguna asignación (para saber cuáles son globales)
-  const { data: todasAsignaciones } = await supabase
-    .from('toppings_tiendas')
-    .select('topping_id');
+  const toppingsAsignadosIds = new Set(asignaciones.map(a => a.topping_id));
 
-  const toppingsConAsignacion = new Set((todasAsignaciones || []).map(a => a.topping_id));
-
-  // Filtrar: incluir toppings asignados a esta tienda O toppings sin ninguna asignación (globales)
-  const toppingsFiltrados = (allToppings || []).filter(topping => {
-    const estaAsignadoATienda = toppingsAsignadosIds.has(topping.id);
-    const esGlobal = !toppingsConAsignacion.has(topping.id);
-    return estaAsignadoATienda || esGlobal;
-  });
+  // Filtrar: solo mostrar toppings asignados a esta tienda
+  const toppingsFiltrados = (allToppings || []).filter(topping =>
+    toppingsAsignadosIds.has(topping.id)
+  );
 
   return NextResponse.json(toppingsFiltrados);
 }

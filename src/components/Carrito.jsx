@@ -22,40 +22,51 @@ export default function Carrito({ items, onActualizar, onEliminar, onCheckout })
     <div className="bg-white rounded-2xl p-6 shadow-xl">
       <h2 className="text-xl font-bold text-[#3d2314] mb-4">🛒 Tu Pedido ({items.length})</h2>
 
-      <div className="space-y-3 mb-4 max-h-72 overflow-y-auto">
+      <div className="space-y-3 mb-4 max-h-96 overflow-y-auto">
         {items.map((item) => (
-          <div key={item.id} className="flex items-center gap-3 p-3 bg-[#f5f0e8] rounded-xl">
-            {/* Imagen del producto */}
-            {item.imagen_url ? (
-              <img src={item.imagen_url} alt={item.nombre} className="w-12 h-12 rounded-lg object-cover" />
-            ) : (
-              <span className="text-2xl">{item.imagen || '🍦'}</span>
-            )}
-            <div className="flex-1 min-w-0">
-              <h4 className="font-semibold text-[#3d2314] truncate">{item.nombre}</h4>
-              {/* Mostrar sabores y toppings si existen */}
-              {item.descripcionPersonalizada && (
-                <p className="text-xs text-gray-500 truncate">{item.descripcionPersonalizada}</p>
+          <div key={item.id} className="p-3 bg-[#f5f0e8] rounded-xl">
+            <div className="flex items-start gap-3">
+              {/* Imagen del producto */}
+              {item.imagen_url ? (
+                <img src={item.imagen_url} alt={item.nombre} className="w-14 h-14 rounded-lg object-cover flex-shrink-0" />
+              ) : (
+                <span className="text-3xl flex-shrink-0">{item.imagen || '🍦'}</span>
               )}
-              <p className="text-sm text-[#4a9b8c] font-bold">S/{(item.precioFinal || item.precio).toFixed(2)}</p>
+              <div className="flex-1 min-w-0">
+                <h4 className="font-semibold text-[#3d2314]">{item.nombre}</h4>
+                {/* Mostrar sabores si existen */}
+                {item.personalizacion?.sabores?.length > 0 && (
+                  <p className="text-xs text-gray-600 mt-1">
+                    <span className="font-medium">Sabores:</span> {item.personalizacion.sabores.map(s => s.nombre).join(', ')}
+                  </p>
+                )}
+                {/* Mostrar toppings si existen */}
+                {item.personalizacion?.toppings?.length > 0 && (
+                  <p className="text-xs text-gray-600">
+                    <span className="font-medium">Toppings:</span> {item.personalizacion.toppings.map(t => t.nombre).join(', ')}
+                  </p>
+                )}
+                <p className="text-sm text-[#4a9b8c] font-bold mt-1">S/{(item.precioFinal || item.precio).toFixed(2)}</p>
+              </div>
             </div>
-            <div className="flex items-center gap-2">
+            {/* Controles de cantidad */}
+            <div className="flex items-center justify-end gap-2 mt-2 pt-2 border-t border-gray-200">
               <button
                 onClick={() => onActualizar(item.id, item.cantidad - 1)}
-                className="w-8 h-8 rounded-full bg-[#3d2314] text-white font-bold hover:bg-[#5c3a2d]"
+                className="w-7 h-7 rounded-full bg-[#3d2314] text-white font-bold hover:bg-[#5c3a2d] text-sm"
               >
                 -
               </button>
-              <span className="w-8 text-center font-bold text-[#3d2314]">{item.cantidad}</span>
+              <span className="w-6 text-center font-bold text-[#3d2314]">{item.cantidad}</span>
               <button
                 onClick={() => onActualizar(item.id, item.cantidad + 1)}
-                className="w-8 h-8 rounded-full bg-[#4a9b8c] text-white font-bold hover:bg-[#3d8577]"
+                className="w-7 h-7 rounded-full bg-[#4a9b8c] text-white font-bold hover:bg-[#3d8577] text-sm"
               >
                 +
               </button>
               <button
                 onClick={() => onEliminar(item.id)}
-                className="w-8 h-8 rounded-full bg-red-100 text-red-500 hover:bg-red-200 ml-1"
+                className="w-7 h-7 rounded-full bg-red-100 text-red-500 hover:bg-red-200 ml-2 text-sm"
               >
                 ✕
               </button>

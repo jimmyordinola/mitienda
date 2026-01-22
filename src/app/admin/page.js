@@ -163,13 +163,30 @@ export default function AdminPage() {
           body: JSON.stringify({
             producto_id: productoSeleccionado,
             tienda_id: tiendaId,
-            disponible: true
+            disponible: true,
+            destacado: false
           })
         });
       }
       cargarProductosTiendas(productoSeleccionado);
     } catch (e) {
       alert('Error al actualizar');
+    }
+  };
+
+  const toggleDestacadoEnTienda = async (asignacionId, destacadoActual) => {
+    try {
+      await fetch('/api/admin/productos-tiendas', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          id: asignacionId,
+          destacado: !destacadoActual
+        })
+      });
+      cargarProductosTiendas(productoSeleccionado);
+    } catch (e) {
+      alert('Error al actualizar destacado');
     }
   };
 
@@ -412,38 +429,50 @@ export default function AdminPage() {
                 {productoSeleccionado && (
                   <div>
                     <p className="text-sm text-gray-600 mb-4">
-                      Marca las tiendas donde este producto estará disponible:
+                      Marca las tiendas donde este producto estará disponible. Usa la estrella para "Lo más pedido":
                     </p>
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                       {tiendas.map((tienda) => {
                         const asignacion = productosTiendas.find(pt => pt.tienda_id === tienda.id);
                         const estaAsignada = !!asignacion;
+                        const esDestacado = asignacion?.destacado || false;
                         return (
                           <div
                             key={tienda.id}
-                            className={`p-4 rounded-lg border-2 cursor-pointer transition-all ${
+                            className={`p-4 rounded-lg border-2 transition-all ${
                               estaAsignada
                                 ? 'border-[#4a9b8c] bg-[#4a9b8c]/10'
                                 : 'border-gray-200 hover:border-gray-300'
                             }`}
-                            onClick={() => toggleProductoEnTienda(tienda.id, estaAsignada, asignacion?.id)}
                           >
                             <div className="flex items-center gap-3">
-                              <div className={`w-6 h-6 rounded border-2 flex items-center justify-center ${
-                                estaAsignada ? 'border-[#4a9b8c] bg-[#4a9b8c]' : 'border-gray-300'
-                              }`}>
+                              <div
+                                className={`w-6 h-6 rounded border-2 flex items-center justify-center cursor-pointer ${
+                                  estaAsignada ? 'border-[#4a9b8c] bg-[#4a9b8c]' : 'border-gray-300'
+                                }`}
+                                onClick={() => toggleProductoEnTienda(tienda.id, estaAsignada, asignacion?.id)}
+                              >
                                 {estaAsignada && (
                                   <svg className="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
                                   </svg>
                                 )}
                               </div>
-                              <div>
+                              <div className="flex-1">
                                 <span className="font-medium">{tienda.nombre}</span>
                                 {tienda.direccion && (
                                   <p className="text-xs text-gray-500">{tienda.direccion}</p>
                                 )}
                               </div>
+                              {estaAsignada && (
+                                <button
+                                  onClick={() => toggleDestacadoEnTienda(asignacion.id, esDestacado)}
+                                  className={`text-2xl transition-all hover:scale-110 ${esDestacado ? 'text-yellow-500' : 'text-gray-300 hover:text-yellow-400'}`}
+                                  title={esDestacado ? 'Quitar de Lo más pedido' : 'Agregar a Lo más pedido'}
+                                >
+                                  ★
+                                </button>
+                              )}
                             </div>
                           </div>
                         );

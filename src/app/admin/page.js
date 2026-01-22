@@ -529,6 +529,14 @@ function ModalEdicion({ seccion, item, categorias, tiendas, onGuardar, onCerrar 
 
   const handleSubmit = (e) => {
     e.preventDefault();
+    // Para productos, agregar el nombre de categoría al campo 'categoria'
+    if (seccion === 'productos' && formData.categoria_id) {
+      const cat = categorias.find(c => c.id === Number(formData.categoria_id));
+      if (cat) {
+        onGuardar({ ...formData, categoria: cat.nombre });
+        return;
+      }
+    }
     onGuardar(formData);
   };
 

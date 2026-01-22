@@ -23,7 +23,7 @@ export async function GET(request) {
 
 // POST - Crear producto
 export async function POST(request) {
-  const { activo, categorias, tiendas_ids, tienda_id, ...producto } = await request.json();
+  const { activo, categorias, tiendas_ids, tiendas_destacadas, tienda_id, ...producto } = await request.json();
 
   const { data, error } = await supabase
     .from('productos')
@@ -37,10 +37,12 @@ export async function POST(request) {
 
   // Asignar producto a las tiendas seleccionadas
   if (tiendas_ids && tiendas_ids.length > 0) {
+    const destacadasSet = new Set(tiendas_destacadas || []);
     const asignaciones = tiendas_ids.map(tid => ({
       producto_id: data.id,
       tienda_id: tid,
-      disponible: true
+      disponible: true,
+      destacado: destacadasSet.has(tid)
     }));
     await supabase.from('productos_tiendas').insert(asignaciones);
   }
@@ -50,7 +52,7 @@ export async function POST(request) {
 
 // PUT - Actualizar producto
 export async function PUT(request) {
-  const { id, activo, categorias, tiendas_ids, tienda_id, ...producto } = await request.json();
+  const { id, activo, categorias, tiendas_ids, tiendas_destacadas, tienda_id, ...producto } = await request.json();
 
   const { data, error } = await supabase
     .from('productos')
@@ -70,10 +72,12 @@ export async function PUT(request) {
 
     // Crear nuevas asignaciones
     if (tiendas_ids.length > 0) {
+      const destacadasSet = new Set(tiendas_destacadas || []);
       const asignaciones = tiendas_ids.map(tid => ({
         producto_id: id,
         tienda_id: tid,
-        disponible: true
+        disponible: true,
+        destacado: destacadasSet.has(tid)
       }));
       await supabase.from('productos_tiendas').insert(asignaciones);
     }

@@ -648,6 +648,7 @@ function ModalEdicion({ seccion, item, categorias, tiendas, onGuardar, onCerrar 
   const [formData, setFormData] = useState(item?.id ? item : { ...defaultValues, ...item });
   const [subiendo, setSubiendo] = useState(false);
   const [tiendasSeleccionadas, setTiendasSeleccionadas] = useState([]);
+  const [tiendasDestacadas, setTiendasDestacadas] = useState([]);
 
   // Cargar tiendas asignadas al producto si estamos editando
   useEffect(() => {
@@ -657,14 +658,29 @@ function ModalEdicion({ seccion, item, categorias, tiendas, onGuardar, onCerrar 
         .then(data => {
           if (Array.isArray(data)) {
             setTiendasSeleccionadas(data.map(pt => pt.tienda_id));
+            setTiendasDestacadas(data.filter(pt => pt.destacado).map(pt => pt.tienda_id));
           }
         })
-        .catch(() => setTiendasSeleccionadas([]));
+        .catch(() => {
+          setTiendasSeleccionadas([]);
+          setTiendasDestacadas([]);
+        });
     }
   }, [seccion, item?.id]);
 
   const toggleTienda = (tiendaId) => {
-    setTiendasSeleccionadas(prev =>
+    setTiendasSeleccionadas(prev => {
+      if (prev.includes(tiendaId)) {
+        // Si se quita la tienda, también quitar de destacados
+        setTiendasDestacadas(d => d.filter(id => id !== tiendaId));
+        return prev.filter(id => id !== tiendaId);
+      }
+      return [...prev, tiendaId];
+    });
+  };
+
+  const toggleDestacado = (tiendaId) => {
+    setTiendasDestacadas(prev =>
       prev.includes(tiendaId)
         ? prev.filter(id => id !== tiendaId)
         : [...prev, tiendaId]
@@ -721,7 +737,8 @@ function ModalEdicion({ seccion, item, categorias, tiendas, onGuardar, onCerrar 
       onGuardar({
         ...formData,
         categoria: cat?.nombre || '',
-        tiendas_ids: tiendasSeleccionadas
+        tiendas_ids: tiendasSeleccionadas,
+        tiendas_destacadas: tiendasDestacadas
       });
       return;
     }
@@ -739,7 +756,6 @@ function ModalEdicion({ seccion, item, categorias, tiendas, onGuardar, onCerrar 
       { name: 'imagen_url', label: 'Imagen', type: 'image_upload' },
       { name: 'orden', label: 'Orden', type: 'number' },
       { name: 'disponible', label: 'Disponible', type: 'checkbox' },
-      { name: 'destacado', label: 'Destacado (Lo mas pedido)', type: 'checkbox' },
       { name: 'personalizable', label: 'Personalizable (permite elegir sabores)', type: 'checkbox' },
       { name: 'max_sabores', label: 'Max. Sabores (si es personalizable)', type: 'number' },
       { name: 'permite_toppings', label: 'Permite Toppings', type: 'checkbox' },
@@ -860,28 +876,42 @@ function ModalEdicion({ seccion, item, categorias, tiendas, onGuardar, onCerrar 
                       ))}
                     </select>
                   ) : campo.type === 'tiendas_multi_select' ? (
-                    <div className="border-2 rounded-lg p-3 max-h-48 overflow-y-auto">
+                    <div className="border-2 rounded-lg p-3 max-h-56 overflow-y-auto">
+                      <p className="text-xs text-gray-500 mb-2">Marca las tiendas. Usa ★ para "Lo más pedido"</p>
                       {tiendas.length === 0 ? (
                         <p className="text-gray-500 text-sm">No hay tiendas disponibles</p>
                       ) : (
-                        <div className="space-y-2">
-                          {tiendas.map((t) => (
-                            <label key={t.id} className="flex items-center gap-2 cursor-pointer hover:bg-gray-50 p-1 rounded">
-                              <input
-                                type="checkbox"
-                                checked={tiendasSeleccionadas.includes(t.id)}
-                                onChange={() => toggleTienda(t.id)}
-                                className="w-4 h-4 accent-[#4a9b8c]"
-                              />
-                              <span className="text-sm">{t.nombre}</span>
-                              {t.direccion && <span className="text-xs text-gray-400">- {t.direccion}</span>}
-                            </label>
-                          ))}
+                        <div className="space-y-1">
+                          {tiendas.map((t) => {
+                            const seleccionada = tiendasSeleccionadas.includes(t.id);
+                            const destacada = tiendasDestacadas.includes(t.id);
+                            return (
+                              <div key={t.id} className={`flex items-center gap-2 p-2 rounded ${seleccionada ? 'bg-[#4a9b8c]/10' : 'hover:bg-gray-50'}`}>
+                                <input
+                                  type="checkbox"
+                                  checked={seleccionada}
+                                  onChange={() => toggleTienda(t.id)}
+                                  className="w-4 h-4 accent-[#4a9b8c]"
+                                />
+                                <span className="text-sm flex-1">{t.nombre}</span>
+                                {seleccionada && (
+                                  <button
+                                    type="button"
+                                    onClick={() => toggleDestacado(t.id)}
+                                    className={`text-xl transition-all hover:scale-110 ${destacada ? 'text-yellow-500' : 'text-gray-300 hover:text-yellow-400'}`}
+                                    title={destacada ? 'Quitar de Lo más pedido' : 'Agregar a Lo más pedido'}
+                                  >
+                                    ★
+                                  </button>
+                                )}
+                              </div>
+                            );
+                          })}
                         </div>
                       )}
                       {tiendasSeleccionadas.length > 0 && (
                         <p className="text-xs text-[#4a9b8c] mt-2 pt-2 border-t">
-                          {tiendasSeleccionadas.length} tienda(s) seleccionada(s)
+                          {tiendasSeleccionadas.length} tienda(s) · {tiendasDestacadas.length} destacada(s)
                         </p>
                       )}
                     </div>

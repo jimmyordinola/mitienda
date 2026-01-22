@@ -9,9 +9,12 @@ export default function AdminPage() {
   const [categorias, setCategorias] = useState([]);
   const [tiendas, setTiendas] = useState([]);
   const [tiendasCategorias, setTiendasCategorias] = useState([]);
+  const [productosTiendas, setProductosTiendas] = useState([]);
+  const [productos, setProductos] = useState([]);
   const [cargando, setCargando] = useState(false);
   const [modal, setModal] = useState({ abierto: false, tipo: null, item: null });
   const [tiendaSeleccionada, setTiendaSeleccionada] = useState(null);
+  const [productoSeleccionado, setProductoSeleccionado] = useState(null);
 
   // Login
   const [email, setEmail] = useState('');
@@ -31,6 +34,15 @@ export default function AdminPage() {
       cargarTiendasCategorias(tiendaSeleccionada);
     }
   }, [tiendaSeleccionada]);
+
+  useEffect(() => {
+    if (admin && seccion === 'productos-tiendas') {
+      cargarProductos();
+      if (productoSeleccionado) {
+        cargarProductosTiendas(productoSeleccionado);
+      }
+    }
+  }, [seccion, productoSeleccionado]);
 
   const handleLogin = async (e) => {
     e.preventDefault();
@@ -82,6 +94,16 @@ export default function AdminPage() {
     } catch (e) {}
   };
 
+  const cargarProductos = async () => {
+    try {
+      const res = await fetch('/api/admin/productos');
+      const data = await res.json();
+      setProductos(Array.isArray(data) ? data : []);
+    } catch (e) {
+      setProductos([]);
+    }
+  };
+
   const cargarTiendasCategorias = async (tiendaId) => {
     try {
       const res = await fetch(`/api/admin/tiendas-categorias?tienda_id=${tiendaId}`);
@@ -113,6 +135,39 @@ export default function AdminPage() {
         });
       }
       cargarTiendasCategorias(tiendaSeleccionada);
+    } catch (e) {
+      alert('Error al actualizar');
+    }
+  };
+
+  const cargarProductosTiendas = async (productoId) => {
+    try {
+      const res = await fetch(`/api/admin/productos-tiendas?producto_id=${productoId}`);
+      const data = await res.json();
+      setProductosTiendas(Array.isArray(data) ? data : []);
+    } catch (e) {
+      setProductosTiendas([]);
+    }
+  };
+
+  const toggleProductoEnTienda = async (tiendaId, estaAsignada, asignacionId) => {
+    try {
+      if (estaAsignada) {
+        await fetch(`/api/admin/productos-tiendas?id=${asignacionId}`, {
+          method: 'DELETE'
+        });
+      } else {
+        await fetch('/api/admin/productos-tiendas', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            producto_id: productoSeleccionado,
+            tienda_id: tiendaId,
+            disponible: true
+          })
+        });
+      }
+      cargarProductosTiendas(productoSeleccionado);
     } catch (e) {
       alert('Error al actualizar');
     }
@@ -232,6 +287,7 @@ export default function AdminPage() {
                 { id: 'productos', nombre: 'Productos', emoji: '📦' },
                 { id: 'categorias', nombre: 'Categorías', emoji: '📂' },
                 { id: 'tiendas-categorias', nombre: 'Categorías x Tienda', emoji: '🔗' },
+                { id: 'productos-tiendas', nombre: 'Productos x Tienda', emoji: '📦🏪' },
                 { id: 'sabores', nombre: 'Sabores', emoji: '🍨' },
                 { id: 'toppings', nombre: 'Toppings', emoji: '🍫' },
                 { id: 'promociones', nombre: 'Promociones', emoji: '🎉' },
@@ -328,6 +384,80 @@ export default function AdminPage() {
                 {!tiendaSeleccionada && (
                   <div className="text-center py-12 text-gray-500">
                     Selecciona una tienda para ver y configurar sus categorías
+                  </div>
+                )}
+              </div>
+            ) : seccion === 'productos-tiendas' ? (
+              /* Vista especial para asignar productos a tiendas */
+              <div className="bg-white rounded-xl shadow-lg p-6">
+                <h2 className="text-2xl font-bold text-[#3d2314] mb-6">Asignar Productos a Tiendas</h2>
+
+                {/* Selector de producto */}
+                <div className="mb-6">
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Selecciona un producto para configurar en qué tiendas está disponible:
+                  </label>
+                  <select
+                    value={productoSeleccionado || ''}
+                    onChange={(e) => setProductoSeleccionado(e.target.value ? Number(e.target.value) : null)}
+                    className="w-full max-w-md px-4 py-3 border-2 rounded-lg focus:border-[#4a9b8c] focus:outline-none"
+                  >
+                    <option value="">-- Seleccionar producto --</option>
+                    {productos.map((p) => (
+                      <option key={p.id} value={p.id}>{p.imagen || ''} {p.nombre} - S/{p.precio}</option>
+                    ))}
+                  </select>
+                </div>
+
+                {productoSeleccionado && (
+                  <div>
+                    <p className="text-sm text-gray-600 mb-4">
+                      Marca las tiendas donde este producto estará disponible:
+                    </p>
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                      {tiendas.map((tienda) => {
+                        const asignacion = productosTiendas.find(pt => pt.tienda_id === tienda.id);
+                        const estaAsignada = !!asignacion;
+                        return (
+                          <div
+                            key={tienda.id}
+                            className={`p-4 rounded-lg border-2 cursor-pointer transition-all ${
+                              estaAsignada
+                                ? 'border-[#4a9b8c] bg-[#4a9b8c]/10'
+                                : 'border-gray-200 hover:border-gray-300'
+                            }`}
+                            onClick={() => toggleProductoEnTienda(tienda.id, estaAsignada, asignacion?.id)}
+                          >
+                            <div className="flex items-center gap-3">
+                              <div className={`w-6 h-6 rounded border-2 flex items-center justify-center ${
+                                estaAsignada ? 'border-[#4a9b8c] bg-[#4a9b8c]' : 'border-gray-300'
+                              }`}>
+                                {estaAsignada && (
+                                  <svg className="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                                  </svg>
+                                )}
+                              </div>
+                              <div>
+                                <span className="font-medium">{tienda.nombre}</span>
+                                {tienda.direccion && (
+                                  <p className="text-xs text-gray-500">{tienda.direccion}</p>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                    {tiendas.length === 0 && (
+                      <p className="text-gray-500 text-center py-8">No hay tiendas creadas</p>
+                    )}
+                  </div>
+                )}
+
+                {!productoSeleccionado && (
+                  <div className="text-center py-12 text-gray-500">
+                    Selecciona un producto para ver y configurar sus tiendas
                   </div>
                 )}
               </div>

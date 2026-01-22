@@ -11,8 +11,21 @@ export async function GET(request) {
     .select('*, categorias(nombre, emoji)')
     .eq('disponible', true);
 
+  // Filtrar por tienda usando la tabla productos_tiendas (muchos a muchos)
   if (tiendaId) {
-    query = query.eq('tienda_id', tiendaId);
+    const { data: asignaciones } = await supabase
+      .from('productos_tiendas')
+      .select('producto_id')
+      .eq('tienda_id', tiendaId)
+      .eq('disponible', true);
+
+    if (asignaciones && asignaciones.length > 0) {
+      const productIds = asignaciones.map(a => a.producto_id);
+      query = query.in('id', productIds);
+    } else {
+      // No hay productos asignados a esta tienda
+      return NextResponse.json([]);
+    }
   }
 
   if (categoriaId) {

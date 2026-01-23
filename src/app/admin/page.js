@@ -857,23 +857,39 @@ function ModalEdicion({ seccion, item, categorias, tiendas, onGuardar, onCerrar 
     ],
   };
 
+  // Bloquear scroll del body cuando el modal está abierto
+  useEffect(() => {
+    document.body.style.overflow = 'hidden';
+    return () => {
+      document.body.style.overflow = '';
+    };
+  }, []);
+
   return (
     <div
-      className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-[100]"
-      onClick={(e) => e.target === e.currentTarget && onCerrar()}
+      className="fixed inset-0 z-[9999] flex items-center justify-center"
+      style={{ touchAction: 'none' }}
     >
+      {/* Overlay oscuro */}
       <div
-        className="bg-white rounded-2xl p-6 w-full max-w-lg max-h-[90vh] overflow-y-auto relative"
-        onClick={(e) => e.stopPropagation()}
+        className="absolute inset-0 bg-black/60"
+        onClick={onCerrar}
+        style={{ touchAction: 'manipulation' }}
+      />
+
+      {/* Contenido del modal */}
+      <div
+        className="relative bg-white rounded-2xl p-5 w-[95%] max-w-lg max-h-[85vh] overflow-y-auto shadow-2xl"
+        style={{ touchAction: 'pan-y' }}
       >
-        <div className="flex items-center justify-between mb-4">
-          <h3 className="text-xl font-bold text-[#3d2314]">
+        <div className="flex items-center justify-between mb-4 sticky top-0 bg-white pb-2 border-b">
+          <h3 className="text-lg font-bold text-[#3d2314]">
             {item.id ? 'Editar' : 'Nuevo'} {seccion.slice(0, -1)}
           </h3>
           <button
             type="button"
             onClick={onCerrar}
-            className="w-8 h-8 flex items-center justify-center rounded-full bg-gray-100 hover:bg-gray-200 text-gray-600"
+            className="w-10 h-10 flex items-center justify-center rounded-full bg-red-100 hover:bg-red-200 text-red-600 text-xl font-bold"
           >
             ✕
           </button>

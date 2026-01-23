@@ -40,7 +40,7 @@ export default function AdminPage() {
   }, [tiendaSeleccionada]);
 
   useEffect(() => {
-    if (admin && seccion === 'productos-tiendas') {
+    if (admin && (seccion === 'productos-tiendas' || seccion === 'promociones')) {
       cargarProductos();
       if (productoSeleccionado) {
         cargarProductosTiendas(productoSeleccionado);

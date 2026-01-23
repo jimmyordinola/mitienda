@@ -6,7 +6,7 @@ export default function Checkout({ items, cliente, onCompletado, onCancelar }) {
   const [usarPuntos, setUsarPuntos] = useState(0);
   const [procesando, setProcesando] = useState(false);
 
-  const subtotal = items.reduce((sum, item) => sum + (item.precio * item.cantidad), 0);
+  const subtotal = items.reduce((sum, item) => sum + ((item.precioFinal || item.precio) * item.cantidad), 0);
   const descuentoPuntos = usarPuntos;
   const total = Math.max(0, subtotal - descuentoPuntos);
   const puntosGanar = Math.floor(total / 10);
@@ -55,7 +55,7 @@ export default function Checkout({ items, cliente, onCompletado, onCancelar }) {
           {items.map((item) => (
             <div key={item.id} className="flex justify-between text-sm py-1 text-[#3d2314]">
               <span>{item.cantidad}x {item.nombre}</span>
-              <span>S/{(item.precio * item.cantidad).toFixed(2)}</span>
+              <span>S/{((item.precioFinal || item.precio) * item.cantidad).toFixed(2)}</span>
             </div>
           ))}
           <div className="border-t border-[#3d2314]/20 mt-2 pt-2 flex justify-between font-bold text-[#3d2314]">

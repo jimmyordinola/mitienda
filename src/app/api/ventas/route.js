@@ -41,7 +41,7 @@ export async function POST(request) {
     venta_id: venta.id,
     producto_id: item.id,
     cantidad: item.cantidad,
-    precio_unitario: item.precio
+    precio_unitario: item.precioFinal || item.precio
   }));
 
   await supabase.from('venta_detalle').insert(detalles);

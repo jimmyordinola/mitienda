@@ -27,6 +27,7 @@ export async function POST(request) {
   }
 
   // Crear la venta
+  console.log('Creando venta:', { cliente_id, total, puntos_ganados });
   const { data: venta, error: ventaError } = await supabase
     .from('ventas')
     .insert([{
@@ -38,8 +39,10 @@ export async function POST(request) {
     .single();
 
   if (ventaError) {
+    console.error('Error creando venta:', ventaError);
     return NextResponse.json({ error: ventaError.message }, { status: 500 });
   }
+  console.log('Venta creada:', venta);
 
   // Insertar detalle de venta
   const detalles = items.map(item => ({
@@ -49,7 +52,11 @@ export async function POST(request) {
     precio_unitario: item.precioFinal || item.precio
   }));
 
-  await supabase.from('venta_detalle').insert(detalles);
+  console.log('Insertando detalles:', detalles);
+  const { error: detalleError } = await supabase.from('venta_detalle').insert(detalles);
+  if (detalleError) {
+    console.error('Error insertando detalles:', detalleError);
+  }
 
   // Si hay cliente, actualizar puntos
   if (cliente_id) {

@@ -110,7 +110,7 @@ export default function Promociones({ tiendaId, onSeleccionarCategoria, promoApl
 
             <div className="absolute bottom-4 left-4">
               <span className="bg-[#3d2314] text-white text-xs font-bold px-4 py-2 rounded shadow-lg">
-                {promo.categorias?.nombre || promo.tipo?.toUpperCase() || 'PROMOCIÓN'}
+                {promo.productos?.nombre || promo.categorias?.nombre || promo.tipo?.toUpperCase() || 'PROMOCIÓN'}
               </span>
             </div>
           </div>

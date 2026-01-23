@@ -10,7 +10,7 @@ export default function Carrito({ items, onActualizar, onEliminar, onCheckout, p
     // 2x1: Por cada 2 del mismo producto con promo 2x1, uno es gratis
     items.forEach(item => {
       const promo2x1 = promociones.find(p =>
-        p.tipo === '2x1' && p.categoria_id === item.categoria_id && p.activo
+        p.tipo === '2x1' && p.producto_id === item.id && p.activo
       );
       if (promo2x1 && item.cantidad >= 2) {
         const unidadesGratis = Math.floor(item.cantidad / 2);

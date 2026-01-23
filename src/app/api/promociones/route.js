@@ -7,7 +7,7 @@ export async function GET(request) {
 
   let query = supabase
     .from('promociones')
-    .select('*, categorias(id, nombre, emoji)')
+    .select('*, categorias(id, nombre, emoji), productos(id, nombre, imagen, precio)')
     .eq('activo', true);
 
   if (tiendaId) {

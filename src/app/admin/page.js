@@ -778,6 +778,7 @@ export default function AdminPage() {
               item={modal.item}
               categorias={categorias}
               tiendas={tiendas}
+              productos={productos}
               onGuardar={guardarItem}
               onCerrar={() => setModal({ abierto: false, tipo: null, item: null })}
             />
@@ -789,7 +790,7 @@ export default function AdminPage() {
 }
 
 // Componente de Edición (pantalla completa en móvil, modal en desktop)
-function FormularioEdicion({ seccion, item, categorias, tiendas, onGuardar, onCerrar }) {
+function FormularioEdicion({ seccion, item, categorias, tiendas, productos = [], onGuardar, onCerrar }) {
   // Valores por defecto para nuevos items
   const defaultValues = {
     activo: true,
@@ -972,8 +973,9 @@ function FormularioEdicion({ seccion, item, categorias, tiendas, onGuardar, onCe
       { name: 'descripcion', label: 'Descripcion', type: 'textarea' },
       { name: 'tipo', label: 'Tipo', type: 'select', options: ['2x1', 'descuento', 'combo', 'puntos_extra'] },
       { name: 'valor', label: 'Valor (% o monto)', type: 'number' },
+      { name: 'producto_id', label: 'Producto (para 2x1)', type: 'producto_select' },
       { name: 'tienda_id', label: 'Tienda (vacio = todas)', type: 'tienda_select' },
-      { name: 'categoria_id', label: 'Categoria relacionada', type: 'categoria_select' },
+      { name: 'categoria_id', label: 'Categoria (para descuento %)', type: 'categoria_select' },
       { name: 'imagen', label: 'Imagen', type: 'image_upload' },
       { name: 'fecha_inicio', label: 'Fecha Inicio', type: 'date' },
       { name: 'fecha_fin', label: 'Fecha Fin', type: 'date' },
@@ -1166,6 +1168,19 @@ function FormularioEdicion({ seccion, item, categorias, tiendas, onGuardar, onCe
                       <option value="">-- Seleccionar categoria --</option>
                       {categorias.map((c) => (
                         <option key={c.id} value={c.id}>{c.emoji} {c.nombre}</option>
+                      ))}
+                    </select>
+                  ) : campo.type === 'producto_select' ? (
+                    <select
+                      name={campo.name}
+                      value={formData[campo.name] || ''}
+                      onChange={handleChange}
+                      required={campo.required}
+                      className="w-full px-4 py-2 border-2 rounded-lg focus:border-[#4a9b8c] focus:outline-none"
+                    >
+                      <option value="">-- Seleccionar producto --</option>
+                      {productos.map((p) => (
+                        <option key={p.id} value={p.id}>{p.imagen || ''} {p.nombre} - S/{p.precio}</option>
                       ))}
                     </select>
                   ) : campo.type === 'image_upload' ? (

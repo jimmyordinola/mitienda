@@ -284,6 +284,7 @@ export default function AdminPage() {
             <h1 className="text-xl font-bold">Panel de Administración</h1>
           </div>
           <div className="flex items-center gap-4">
+            <span className="text-xs bg-yellow-500 text-black px-2 py-1 rounded">v2.0</span>
             <span className="text-sm">{admin.nombre}</span>
             <button
               onClick={() => setAdmin(null)}

@@ -15,6 +15,9 @@ export default function AdminPage() {
   const [modal, setModal] = useState({ abierto: false, tipo: null, item: null });
   const [tiendaSeleccionada, setTiendaSeleccionada] = useState(null);
   const [productoSeleccionado, setProductoSeleccionado] = useState(null);
+  const [filtro, setFiltro] = useState('');
+  const [saboresTiendas, setSaboresTiendas] = useState({});
+  const [toppingsTiendas, setToppingsTiendas] = useState({});
 
   // Login
   const [email, setEmail] = useState('');
@@ -68,10 +71,31 @@ export default function AdminPage() {
 
   const cargarDatos = async () => {
     setCargando(true);
+    setFiltro('');
     try {
       const res = await fetch(`/api/admin/${seccion}`);
       const data = await res.json();
       setDatos(data);
+
+      // Cargar tiendas asignadas para sabores y toppings
+      if (seccion === 'sabores' && Array.isArray(data)) {
+        const tiendasMap = {};
+        for (const sabor of data) {
+          const res2 = await fetch(`/api/admin/sabores-tiendas?sabor_id=${sabor.id}`);
+          const tiendas = await res2.json();
+          tiendasMap[sabor.id] = Array.isArray(tiendas) ? tiendas.map(t => t.tienda_id) : [];
+        }
+        setSaboresTiendas(tiendasMap);
+      }
+      if (seccion === 'toppings' && Array.isArray(data)) {
+        const tiendasMap = {};
+        for (const topping of data) {
+          const res2 = await fetch(`/api/admin/toppings-tiendas?topping_id=${topping.id}`);
+          const tiendas = await res2.json();
+          tiendasMap[topping.id] = Array.isArray(tiendas) ? tiendas.map(t => t.tienda_id) : [];
+        }
+        setToppingsTiendas(tiendasMap);
+      }
     } catch (e) {
       console.error('Error cargando datos');
     }
@@ -493,14 +517,25 @@ export default function AdminPage() {
               </div>
             ) : (
             <div className="bg-white rounded-xl shadow-lg p-6">
-              <div className="flex items-center justify-between mb-6">
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6">
                 <h2 className="text-2xl font-bold text-[#3d2314] capitalize">{seccion}</h2>
-                <button
-                  onClick={() => setModal({ abierto: true, tipo: 'crear', item: {} })}
-                  className="px-4 py-2 bg-[#4a9b8c] text-white rounded-lg font-medium hover:bg-[#3d8577]"
-                >
-                  + Agregar
-                </button>
+                <div className="flex items-center gap-3 w-full sm:w-auto">
+                  {(seccion === 'sabores' || seccion === 'toppings' || seccion === 'productos') && (
+                    <input
+                      type="text"
+                      placeholder="Buscar..."
+                      value={filtro}
+                      onChange={(e) => setFiltro(e.target.value)}
+                      className="flex-1 sm:w-48 px-3 py-2 border-2 rounded-lg focus:border-[#4a9b8c] focus:outline-none text-sm"
+                    />
+                  )}
+                  <button
+                    onClick={() => setModal({ abierto: true, tipo: 'crear', item: {} })}
+                    className="px-4 py-2 bg-[#4a9b8c] text-white rounded-lg font-medium hover:bg-[#3d8577] whitespace-nowrap"
+                  >
+                    + Agregar
+                  </button>
+                </div>
               </div>
 
               {cargando ? (
@@ -516,6 +551,7 @@ export default function AdminPage() {
                         {seccion === 'productos' && <th className="text-left py-3 px-4">Categoria</th>}
                         {seccion === 'productos' && <th className="text-left py-3 px-4">Personal.</th>}
                         {seccion === 'toppings' && <th className="text-left py-3 px-4">Precio</th>}
+                        {(seccion === 'sabores' || seccion === 'toppings') && <th className="text-left py-3 px-4">Tiendas</th>}
                         {(seccion === 'productos' || seccion === 'promociones' || seccion === 'cupones') && <th className="text-left py-3 px-4">Tienda</th>}
                         {seccion === 'cupones' && <th className="text-left py-3 px-4">Codigo</th>}
                         {seccion === 'cupones' && <th className="text-left py-3 px-4">Valor</th>}
@@ -527,14 +563,30 @@ export default function AdminPage() {
                       </tr>
                     </thead>
                     <tbody>
-                      {datos.map((item) => {
+                      {datos
+                        .filter(item => {
+                          if (!filtro) return true;
+                          const nombre = (item.nombre || item.titulo || '').toLowerCase();
+                          return nombre.includes(filtro.toLowerCase());
+                        })
+                        .map((item) => {
                         const tiendaNombre = tiendas.find(t => t.id === item.tienda_id)?.nombre || 'Todas';
                         const categoriaNombre = categorias.find(c => c.id === item.categoria_id)?.nombre || item.categoria || '-';
+                        // Tiendas asignadas para sabores y toppings
+                        const tiendasIds = seccion === 'sabores' ? saboresTiendas[item.id] : (seccion === 'toppings' ? toppingsTiendas[item.id] : []);
+                        const tiendasNombres = (tiendasIds || []).map(tid => tiendas.find(t => t.id === tid)?.nombre).filter(Boolean);
                         return (
                         <tr key={item.id} className="border-b hover:bg-gray-50">
                           <td className="py-3 px-4">{item.id}</td>
                           <td className="py-3 px-4">
-                            {item.imagen || item.emoji} {item.nombre || item.titulo}
+                            {(seccion === 'sabores' || seccion === 'toppings') ? (
+                              <div className="flex items-center gap-2">
+                                {item.imagen && <img src={item.imagen} alt="" className="w-8 h-8 rounded-full object-cover" />}
+                                <span className="font-medium">{item.nombre}</span>
+                              </div>
+                            ) : (
+                              <>{item.imagen || item.emoji} {item.nombre || item.titulo}</>
+                            )}
                           </td>
                           {seccion === 'productos' && (
                             <td className="py-3 px-4">S/{item.precio}</td>
@@ -553,6 +605,21 @@ export default function AdminPage() {
                           )}
                           {seccion === 'toppings' && (
                             <td className="py-3 px-4">+S/{item.precio || 0}</td>
+                          )}
+                          {(seccion === 'sabores' || seccion === 'toppings') && (
+                            <td className="py-3 px-4">
+                              {tiendasNombres.length > 0 ? (
+                                <div className="flex flex-wrap gap-1">
+                                  {tiendasNombres.map((nombre, i) => (
+                                    <span key={i} className="px-2 py-0.5 bg-blue-100 text-blue-700 text-xs rounded">
+                                      {nombre}
+                                    </span>
+                                  ))}
+                                </div>
+                              ) : (
+                                <span className="text-gray-400 text-xs">Sin asignar</span>
+                              )}
+                            </td>
                           )}
                           {(seccion === 'productos' || seccion === 'promociones' || seccion === 'cupones') && (
                             <td className="py-3 px-4">

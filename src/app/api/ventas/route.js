@@ -5,6 +5,11 @@ import { supabase } from '@/lib/db';
 export async function POST(request) {
   const { cliente_id, items, total, usar_puntos = 0 } = await request.json();
 
+  // Requerir cliente logueado para procesar venta
+  if (!cliente_id) {
+    return NextResponse.json({ error: 'Debes iniciar sesión para realizar una compra' }, { status: 401 });
+  }
+
   // Calcular puntos a ganar (1 punto por cada $10)
   const puntos_ganados = Math.floor(total / 10);
 
@@ -87,8 +92,6 @@ export async function POST(request) {
     total,
     puntos_ganados,
     puntos_usados: usar_puntos,
-    mensaje: cliente_id
-      ? `¡Ganaste ${puntos_ganados} puntos!`
-      : 'Venta completada (sin acumular puntos)'
+    mensaje: `¡Ganaste ${puntos_ganados} puntos!`
   });
 }

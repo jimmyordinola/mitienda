@@ -239,7 +239,13 @@ export default function Home() {
               items={carrito}
               onActualizar={actualizarCantidad}
               onEliminar={eliminarDelCarrito}
-              onCheckout={() => setMostrarCheckout(true)}
+              onCheckout={() => {
+                if (!cliente) {
+                  setMostrarLogin(true);
+                } else {
+                  setMostrarCheckout(true);
+                }
+              }}
             />
           </div>
         </div>

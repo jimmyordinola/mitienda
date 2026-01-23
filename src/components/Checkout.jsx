@@ -2,15 +2,20 @@
 
 import { useState } from 'react';
 
-export default function Checkout({ items, cliente, onCompletado, onCancelar }) {
+export default function Checkout({ items, cliente, tienda, onCompletado, onCancelar }) {
   const [usarPuntos, setUsarPuntos] = useState(0);
   const [procesando, setProcesando] = useState(false);
+
+  // Si no hay cliente logueado, no mostrar checkout
+  if (!cliente) {
+    return null;
+  }
 
   const subtotal = items.reduce((sum, item) => sum + ((item.precioFinal || item.precio) * item.cantidad), 0);
   const descuentoPuntos = usarPuntos;
   const total = Math.max(0, subtotal - descuentoPuntos);
   const puntosGanar = Math.floor(total / 10);
-  const maxPuntosUsar = cliente ? Math.min(cliente.puntos, subtotal) : 0;
+  const maxPuntosUsar = Math.min(cliente.puntos, subtotal);
 
   const procesarPago = async () => {
     setProcesando(true);
@@ -20,7 +25,7 @@ export default function Checkout({ items, cliente, onCompletado, onCancelar }) {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          cliente_id: cliente?.id || null,
+          cliente_id: cliente.id,
           items,
           total: subtotal,
           usar_puntos: usarPuntos
@@ -79,7 +84,7 @@ export default function Checkout({ items, cliente, onCompletado, onCancelar }) {
         </div>
 
         {/* Usar puntos */}
-        {cliente && cliente.puntos > 0 && (
+        {cliente.puntos > 0 && (
           <div className="bg-[#4a9b8c]/10 rounded-xl p-4 mb-4">
             <h3 className="font-semibold text-[#3d2314] mb-2">
               🎁 Usar puntos ({cliente.puntos} disponibles)
@@ -106,16 +111,9 @@ export default function Checkout({ items, cliente, onCompletado, onCancelar }) {
             <span>Total:</span>
             <span>S/{total.toFixed(2)}</span>
           </div>
-          {cliente && (
-            <p className="text-sm text-[#4a9b8c] mt-1">
-              +{puntosGanar} puntos a ganar
-            </p>
-          )}
-          {!cliente && (
-            <p className="text-xs text-yellow-300 mt-2">
-              ⚠️ Inicia sesión para acumular puntos
-            </p>
-          )}
+          <p className="text-sm text-[#4a9b8c] mt-1">
+            +{puntosGanar} puntos a ganar
+          </p>
         </div>
 
         {/* Botones */}

@@ -8,6 +8,7 @@ import Catalogo from '@/components/Catalogo';
 import Carrito from '@/components/Carrito';
 import Checkout from '@/components/Checkout';
 import Footer from '@/components/Footer';
+import Promociones from '@/components/Promociones';
 import { supabaseBrowser, signOut } from '@/lib/supabase-browser';
 
 export default function Home() {
@@ -18,6 +19,9 @@ export default function Home() {
   const [ventaCompletada, setVentaCompletada] = useState(null);
   const [mostrarLogin, setMostrarLogin] = useState(false);
   const [authUser, setAuthUser] = useState(null);
+  const [promociones, setPromociones] = useState([]);
+  const [promoAplicada, setPromoAplicada] = useState(null);
+  const [descuentoPromo, setDescuentoPromo] = useState(0);
 
   useEffect(() => {
     const { data: { subscription } } = supabaseBrowser.auth.onAuthStateChange(
@@ -41,6 +45,31 @@ export default function Home() {
 
     return () => subscription.unsubscribe();
   }, []);
+
+  // Cargar promociones cuando se selecciona tienda
+  useEffect(() => {
+    if (tiendaSeleccionada) {
+      cargarPromociones();
+    }
+  }, [tiendaSeleccionada]);
+
+  const cargarPromociones = async () => {
+    try {
+      const res = await fetch(`/api/promociones?tienda_id=${tiendaSeleccionada.id}`);
+      const data = await res.json();
+      setPromociones(Array.isArray(data) ? data : []);
+    } catch (e) {
+      setPromociones([]);
+    }
+  };
+
+  const activarPromocion = (promo) => {
+    if (promoAplicada?.id === promo.id) {
+      setPromoAplicada(null); // Desactivar si ya está activa
+    } else {
+      setPromoAplicada(promo);
+    }
+  };
 
   const vincularClienteSocial = async (user) => {
     try {
@@ -123,6 +152,8 @@ export default function Home() {
   const cambiarTienda = () => {
     setTiendaSeleccionada(null);
     setCarrito([]);
+    setPromoAplicada(null);
+    setPromociones([]);
   };
 
   return (
@@ -183,6 +214,7 @@ export default function Home() {
           items={carrito}
           cliente={cliente}
           tienda={tiendaSeleccionada}
+          descuentoPromo={descuentoPromo}
           onCompletado={handleCompraCompletada}
           onCancelar={() => setMostrarCheckout(false)}
         />
@@ -212,6 +244,11 @@ export default function Home() {
         <div className="grid lg:grid-cols-3 gap-8">
           {/* Catálogo */}
           <div className="lg:col-span-2">
+            <Promociones
+              tiendaId={tiendaSeleccionada.id}
+              promoAplicada={promoAplicada}
+              onActivarPromo={activarPromocion}
+            />
             <Catalogo onAgregarCarrito={agregarAlCarrito} tiendaId={tiendaSeleccionada.id} />
           </div>
 
@@ -239,7 +276,10 @@ export default function Home() {
               items={carrito}
               onActualizar={actualizarCantidad}
               onEliminar={eliminarDelCarrito}
-              onCheckout={() => {
+              promociones={promociones}
+              promoAplicada={promoAplicada}
+              onCheckout={({ descuentoPromo: descuento }) => {
+                setDescuentoPromo(descuento || 0);
                 if (!cliente) {
                   setMostrarLogin(true);
                 } else {

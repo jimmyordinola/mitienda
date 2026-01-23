@@ -3,15 +3,18 @@ import { supabase } from '@/lib/db';
 
 // POST - Procesar venta
 export async function POST(request) {
-  const { cliente_id, items, total, usar_puntos = 0 } = await request.json();
+  const { cliente_id, items, total, descuento = 0, usar_puntos = 0 } = await request.json();
 
   // Requerir cliente logueado para procesar venta
   if (!cliente_id) {
     return NextResponse.json({ error: 'Debes iniciar sesión para realizar una compra' }, { status: 401 });
   }
 
-  // Calcular puntos a ganar (1 punto por cada $10)
-  const puntos_ganados = Math.floor(total / 10);
+  // Calcular total final después de descuento promoción
+  const totalFinal = total - descuento;
+
+  // Calcular puntos a ganar (1 punto por cada $10 del total con descuento)
+  const puntos_ganados = Math.floor(totalFinal / 10);
 
   // Si usa puntos, verificar que tenga suficientes
   if (usar_puntos > 0 && cliente_id) {
@@ -27,12 +30,13 @@ export async function POST(request) {
   }
 
   // Crear la venta
-  console.log('Creando venta:', { cliente_id, total, puntos_ganados });
+  console.log('Creando venta:', { cliente_id, total, descuento, totalFinal, puntos_ganados });
   const { data: venta, error: ventaError } = await supabase
     .from('ventas')
     .insert([{
       cliente_id: cliente_id || null,
-      total,
+      total: totalFinal,
+      descuento,
       puntos_ganados
     }])
     .select()
@@ -96,7 +100,8 @@ export async function POST(request) {
 
   return NextResponse.json({
     venta_id: venta.id,
-    total,
+    total: totalFinal,
+    descuento,
     puntos_ganados,
     puntos_usados: usar_puntos,
     mensaje: `¡Ganaste ${puntos_ganados} puntos!`

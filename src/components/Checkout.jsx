@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 
-export default function Checkout({ items, cliente, tienda, onCompletado, onCancelar }) {
+export default function Checkout({ items, cliente, tienda, descuentoPromo = 0, onCompletado, onCancelar }) {
   const [usarPuntos, setUsarPuntos] = useState(0);
   const [procesando, setProcesando] = useState(false);
 
@@ -12,10 +12,11 @@ export default function Checkout({ items, cliente, tienda, onCompletado, onCance
   }
 
   const subtotal = items.reduce((sum, item) => sum + ((item.precioFinal || item.precio) * item.cantidad), 0);
+  const totalConPromo = subtotal - descuentoPromo;
   const descuentoPuntos = usarPuntos;
-  const total = Math.max(0, subtotal - descuentoPuntos);
+  const total = Math.max(0, totalConPromo - descuentoPuntos);
   const puntosGanar = Math.floor(total / 10);
-  const maxPuntosUsar = Math.min(cliente.puntos, subtotal);
+  const maxPuntosUsar = Math.min(cliente.puntos, totalConPromo);
 
   const procesarPago = async () => {
     setProcesando(true);
@@ -28,6 +29,7 @@ export default function Checkout({ items, cliente, tienda, onCompletado, onCance
           cliente_id: cliente.id,
           items,
           total: subtotal,
+          descuento: descuentoPromo,
           usar_puntos: usarPuntos
         })
       });
@@ -77,10 +79,20 @@ export default function Checkout({ items, cliente, tienda, onCompletado, onCance
               )}
             </div>
           ))}
-          <div className="border-t border-[#3d2314]/20 mt-2 pt-2 flex justify-between font-bold text-[#3d2314]">
+
+          {/* Subtotal */}
+          <div className="border-t border-[#3d2314]/20 mt-2 pt-2 flex justify-between text-sm text-[#3d2314]">
             <span>Subtotal:</span>
             <span>S/{subtotal.toFixed(2)}</span>
           </div>
+
+          {/* Descuento promoción */}
+          {descuentoPromo > 0 && (
+            <div className="flex justify-between text-sm text-green-600 font-medium">
+              <span>🎉 Descuento promoción:</span>
+              <span>-S/{descuentoPromo.toFixed(2)}</span>
+            </div>
+          )}
         </div>
 
         {/* Usar puntos */}

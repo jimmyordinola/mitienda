@@ -4,20 +4,26 @@ import { supabase } from '@/lib/db';
 // GET - Obtener todas las ventas con detalles
 export async function GET() {
   try {
-    // Obtener ventas (sin join a clientes para evitar errores de FK)
+    console.log('=== FETCHING VENTAS ===');
+
+    // Obtener ventas sin ordenar por created_at primero
     const { data: ventas, error } = await supabase
       .from('ventas')
-      .select('*')
-      .order('created_at', { ascending: false });
+      .select('*');
+
+    console.log('Ventas result:', { ventas, error });
 
     if (error) {
       console.error('Error fetching ventas:', error);
-      return NextResponse.json([]);
+      return NextResponse.json({ error: error.message, debug: 'fetch_error' });
     }
 
     if (!ventas || ventas.length === 0) {
-      return NextResponse.json([]);
+      console.log('No ventas found');
+      return NextResponse.json({ debug: 'no_ventas', ventas: [] });
     }
+
+    console.log('Found ventas:', ventas.length);
 
     // Obtener detalles de cada venta con info del cliente
     const ventasConDetalles = await Promise.all(

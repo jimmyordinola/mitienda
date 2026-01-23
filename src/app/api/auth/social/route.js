@@ -11,95 +11,87 @@ export async function POST(request) {
       return NextResponse.json({ error: 'Datos incompletos' }, { status: 400 });
     }
 
-    // Primero verificar si las columnas existen intentando una query simple
-    const { data: testData, error: testError } = await supabase
-      .from('clientes')
-      .select('id, nombre, puntos')
-      .limit(1);
-
-    if (testError) {
-      console.error('Error accediendo a clientes:', testError);
-      return NextResponse.json({ error: testError.message }, { status: 500 });
+    // Verificar si las columnas auth_id y email existen
+    let columnasExisten = false;
+    try {
+      const { data: columnas } = await supabase.rpc('get_columns_info', { table_name: 'clientes' });
+      columnasExisten = columnas?.some(c => c.column_name === 'auth_id');
+    } catch {
+      // Si falla el RPC, intentamos directamente
+      const { error: testError } = await supabase
+        .from('clientes')
+        .select('auth_id')
+        .limit(1);
+      columnasExisten = !testError;
     }
 
-    // Buscar cliente existente por auth_id
-    let { data: cliente, error } = await supabase
-      .from('clientes')
-      .select('*')
-      .eq('auth_id', auth_id)
-      .maybeSingle();
+    let cliente = null;
 
-    if (error && !error.message.includes('column')) {
-      console.error('Error buscando por auth_id:', error);
-    }
-
-    // Si no existe por auth_id, buscar por email
-    if (!cliente) {
-      const { data: clientePorEmail, error: emailError } = await supabase
+    if (columnasExisten) {
+      // Buscar cliente existente por auth_id
+      const { data: clientePorAuth } = await supabase
         .from('clientes')
         .select('*')
-        .eq('email', email)
+        .eq('auth_id', auth_id)
         .maybeSingle();
 
-      if (emailError && !emailError.message.includes('column')) {
-        console.error('Error buscando por email:', emailError);
+      if (clientePorAuth) {
+        cliente = clientePorAuth;
+      } else {
+        // Buscar por email
+        const { data: clientePorEmail } = await supabase
+          .from('clientes')
+          .select('*')
+          .eq('email', email)
+          .maybeSingle();
+
+        if (clientePorEmail) {
+          // Vincular cuenta existente
+          const { data: updated } = await supabase
+            .from('clientes')
+            .update({ auth_id, avatar_url })
+            .eq('id', clientePorEmail.id)
+            .select()
+            .single();
+          cliente = updated || clientePorEmail;
+        }
       }
 
-      if (clientePorEmail) {
-        // Vincular cuenta existente con auth_id
-        const { data: clienteActualizado, error: updateError } = await supabase
+      // Si no existe, crear nuevo
+      if (!cliente) {
+        const { data: nuevo, error: insertError } = await supabase
           .from('clientes')
-          .update({ auth_id, avatar_url })
-          .eq('id', clientePorEmail.id)
+          .insert([{ nombre, email, auth_id, avatar_url, puntos: 0 }])
           .select()
           .single();
 
-        if (updateError) {
-          console.error('Error actualizando cliente:', updateError);
-          // Si falla por columnas faltantes, devolver cliente sin actualizar
-          cliente = clientePorEmail;
+        if (insertError) {
+          console.error('Error insertando cliente completo:', insertError);
         } else {
-          cliente = clienteActualizado;
+          cliente = nuevo;
         }
       }
     }
 
-    // Si aún no existe, crear nuevo cliente
+    // Fallback: crear cliente con campos mínimos
     if (!cliente) {
-      const { data: nuevoCliente, error: insertError } = await supabase
+      console.log('Usando fallback - creando cliente con campos mínimos');
+      const { data: minimo, error: minError } = await supabase
         .from('clientes')
-        .insert([{
-          nombre,
-          email,
-          auth_id,
-          avatar_url,
-          puntos: 0
-        }])
+        .insert([{ nombre, puntos: 0 }])
         .select()
         .single();
 
-      if (insertError) {
-        console.error('Error creando cliente:', insertError);
-        // Intentar crear con campos mínimos si fallan las columnas nuevas
-        const { data: clienteMinimo, error: minError } = await supabase
-          .from('clientes')
-          .insert([{
-            nombre,
-            puntos: 0
-          }])
-          .select()
-          .single();
-
-        if (minError) {
-          return NextResponse.json({ error: 'No se pudo crear el cliente: ' + minError.message }, { status: 500 });
-        }
-        cliente = clienteMinimo;
-      } else {
-        cliente = nuevoCliente;
+      if (minError) {
+        console.error('Error creando cliente mínimo:', minError);
+        return NextResponse.json({
+          error: 'No se pudo crear cliente. Ejecuta el SQL en Supabase para agregar columnas auth_id, email, avatar_url',
+          details: minError.message
+        }, { status: 500 });
       }
+      cliente = minimo;
     }
 
-    // No devolver el PIN en la respuesta
     const { pin, ...clienteSinPin } = cliente;
     return NextResponse.json(clienteSinPin);
 

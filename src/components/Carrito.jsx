@@ -20,10 +20,10 @@ export default function Carrito({ items, onActualizar, onEliminar, onCheckout, p
       }
     });
 
-    // Descuento porcentaje: aplica a productos de la categoría de la promo activa
+    // Descuento porcentaje: aplica al producto específico de la promo activa
     if (promoAplicada && promoAplicada.tipo === 'descuento' && promoAplicada.valor) {
       items.forEach(item => {
-        if (item.categoria_id === promoAplicada.categoria_id) {
+        if (item.id === promoAplicada.producto_id) {
           const precioItem = item.precioFinal || item.precio;
           const descuentoItem = (precioItem * item.cantidad) * (promoAplicada.valor / 100);
           descuentoPorcentaje += descuentoItem;

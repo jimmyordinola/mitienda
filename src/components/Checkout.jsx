@@ -8,6 +8,9 @@ export default function Checkout({ items, cliente, tienda, descuentoPromo = 0, o
   const [metodoPago, setMetodoPago] = useState('tienda'); // tienda, tarjeta, yape
   const [culqiReady, setCulqiReady] = useState(false);
 
+  // Verificar si Culqi esta configurado
+  const culqiConfigurado = Boolean(process.env.NEXT_PUBLIC_CULQI_PUBLIC_KEY);
+
   // Cargar script de Culqi
   useEffect(() => {
     if (typeof window !== 'undefined' && !window.Culqi) {
@@ -132,6 +135,14 @@ export default function Checkout({ items, cliente, tienda, descuentoPromo = 0, o
   const abrirCulqi = () => {
     if (!culqiReady || !window.Culqi) {
       alert('El sistema de pago no esta listo. Intenta de nuevo.');
+      return;
+    }
+
+    // Verificar que la llave de Culqi este configurada
+    const culqiKey = process.env.NEXT_PUBLIC_CULQI_PUBLIC_KEY;
+    if (!culqiKey) {
+      alert('El pago con tarjeta no esta disponible en este momento. Por favor selecciona pago en tienda.');
+      setMetodoPago('tienda');
       return;
     }
 
@@ -285,12 +296,13 @@ export default function Checkout({ items, cliente, tienda, descuentoPromo = 0, o
 
             {/* Tarjeta */}
             <button
-              onClick={() => setMetodoPago('tarjeta')}
+              onClick={() => culqiConfigurado && setMetodoPago('tarjeta')}
+              disabled={!culqiConfigurado}
               className={`p-3 rounded-xl border-2 transition-all ${
                 metodoPago === 'tarjeta'
                   ? 'border-[#4a9b8c] bg-[#4a9b8c]/10'
                   : 'border-gray-200 hover:border-gray-300'
-              }`}
+              } ${!culqiConfigurado ? 'opacity-40 cursor-not-allowed' : ''}`}
             >
               <div className="text-2xl mb-1">💳</div>
               <p className="text-xs font-medium text-[#3d2314]">Tarjeta</p>
@@ -298,12 +310,13 @@ export default function Checkout({ items, cliente, tienda, descuentoPromo = 0, o
 
             {/* Yape */}
             <button
-              onClick={() => setMetodoPago('yape')}
+              onClick={() => culqiConfigurado && setMetodoPago('yape')}
+              disabled={!culqiConfigurado}
               className={`p-3 rounded-xl border-2 transition-all ${
                 metodoPago === 'yape'
                   ? 'border-[#4a9b8c] bg-[#4a9b8c]/10'
                   : 'border-gray-200 hover:border-gray-300'
-              }`}
+              } ${!culqiConfigurado ? 'opacity-40 cursor-not-allowed' : ''}`}
             >
               <div className="flex justify-center mb-1">
                 <svg width="28" height="28" viewBox="0 0 24 24" fill="none">
@@ -321,6 +334,11 @@ export default function Checkout({ items, cliente, tienda, descuentoPromo = 0, o
             {metodoPago === 'tarjeta' && 'Visa, Mastercard, American Express'}
             {metodoPago === 'yape' && 'Paga con tu billetera Yape'}
           </p>
+          {!culqiConfigurado && (
+            <p className="text-xs text-orange-500 mt-1 text-center">
+              Pago online proximamente disponible
+            </p>
+          )}
         </div>
 
         {/* Total */}

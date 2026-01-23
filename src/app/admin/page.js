@@ -296,10 +296,10 @@ export default function AdminPage() {
       </header>
 
       <div className="container mx-auto px-4 py-6">
-        <div className="flex gap-6">
+        <div className="flex flex-col lg:flex-row gap-6">
           {/* Sidebar */}
-          <aside className="w-64 bg-white rounded-xl shadow-lg p-4">
-            <nav className="space-y-2">
+          <aside className="w-full lg:w-64 bg-white rounded-xl shadow-lg p-4">
+            <nav className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-1 gap-2">
               {[
                 { id: 'productos', nombre: 'Productos', emoji: '📦' },
                 { id: 'categorias', nombre: 'Categorías', emoji: '📂' },
@@ -858,11 +858,26 @@ function ModalEdicion({ seccion, item, categorias, tiendas, onGuardar, onCerrar 
   };
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
-      <div className="bg-white rounded-2xl p-6 w-full max-w-lg max-h-[90vh] overflow-y-auto">
-        <h3 className="text-xl font-bold text-[#3d2314] mb-4">
-          {item.id ? 'Editar' : 'Nuevo'} {seccion.slice(0, -1)}
-        </h3>
+    <div
+      className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-[100]"
+      onClick={(e) => e.target === e.currentTarget && onCerrar()}
+    >
+      <div
+        className="bg-white rounded-2xl p-6 w-full max-w-lg max-h-[90vh] overflow-y-auto relative"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-xl font-bold text-[#3d2314]">
+            {item.id ? 'Editar' : 'Nuevo'} {seccion.slice(0, -1)}
+          </h3>
+          <button
+            type="button"
+            onClick={onCerrar}
+            className="w-8 h-8 flex items-center justify-center rounded-full bg-gray-100 hover:bg-gray-200 text-gray-600"
+          >
+            ✕
+          </button>
+        </div>
 
         <form onSubmit={handleSubmit}>
           {campos[seccion]?.map((campo) => (

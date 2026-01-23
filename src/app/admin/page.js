@@ -1170,18 +1170,40 @@ function FormularioEdicion({ seccion, item, categorias, tiendas, productos = [],
                       ))}
                     </select>
                   ) : campo.type === 'producto_select' ? (
-                    <select
-                      name={campo.name}
-                      value={formData[campo.name] || ''}
-                      onChange={handleChange}
-                      required={campo.required}
-                      className="w-full px-4 py-2 border-2 rounded-lg focus:border-[#4a9b8c] focus:outline-none"
-                    >
-                      <option value="">-- Seleccionar producto --</option>
-                      {productos.map((p) => (
-                        <option key={p.id} value={p.id}>{p.imagen || ''} {p.nombre} - S/{p.precio}</option>
-                      ))}
-                    </select>
+                    <div className="space-y-2">
+                      <input
+                        type="text"
+                        placeholder="Buscar producto..."
+                        className="w-full px-4 py-2 border-2 rounded-lg focus:border-[#4a9b8c] focus:outline-none text-sm"
+                        onChange={(e) => {
+                          const busqueda = e.target.value.toLowerCase();
+                          const select = e.target.nextElementSibling;
+                          const opciones = select.querySelectorAll('option');
+                          opciones.forEach((opt, i) => {
+                            if (i === 0) return; // Skip placeholder
+                            opt.style.display = opt.textContent.toLowerCase().includes(busqueda) ? '' : 'none';
+                          });
+                        }}
+                      />
+                      <select
+                        name={campo.name}
+                        value={formData[campo.name] || ''}
+                        onChange={handleChange}
+                        required={campo.required}
+                        className="w-full px-4 py-2 border-2 rounded-lg focus:border-[#4a9b8c] focus:outline-none"
+                        size={Math.min(8, productos.length + 1)}
+                      >
+                        <option value="">-- Seleccionar producto --</option>
+                        {productos.map((p) => (
+                          <option key={p.id} value={p.id}>{p.imagen || ''} {p.nombre} - S/{p.precio}</option>
+                        ))}
+                      </select>
+                      {formData[campo.name] && (
+                        <p className="text-xs text-[#4a9b8c]">
+                          Seleccionado: {productos.find(p => p.id == formData[campo.name])?.nombre || 'N/A'}
+                        </p>
+                      )}
+                    </div>
                   ) : campo.type === 'image_upload' ? (
                     <div className="space-y-2">
                       {formData[campo.name] && (

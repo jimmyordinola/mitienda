@@ -624,23 +624,27 @@ export default function AdminPage() {
         </div>
       </div>
 
-      {/* Modal de edición */}
+      {/* Vista de edición (reemplaza contenido en móvil) */}
       {modal.abierto && (
-        <ModalEdicion
-          seccion={seccion}
-          item={modal.item}
-          categorias={categorias}
-          tiendas={tiendas}
-          onGuardar={guardarItem}
-          onCerrar={() => setModal({ abierto: false, tipo: null, item: null })}
-        />
+        <div className="fixed inset-0 bg-white z-50 overflow-auto lg:bg-black/50 lg:flex lg:items-center lg:justify-center lg:p-4">
+          <div className="bg-white w-full lg:max-w-lg lg:rounded-xl lg:max-h-[90vh] lg:overflow-auto">
+            <FormularioEdicion
+              seccion={seccion}
+              item={modal.item}
+              categorias={categorias}
+              tiendas={tiendas}
+              onGuardar={guardarItem}
+              onCerrar={() => setModal({ abierto: false, tipo: null, item: null })}
+            />
+          </div>
+        </div>
       )}
     </div>
   );
 }
 
-// Componente Modal
-function ModalEdicion({ seccion, item, categorias, tiendas, onGuardar, onCerrar }) {
+// Componente de Edición (pantalla completa en móvil, modal en desktop)
+function FormularioEdicion({ seccion, item, categorias, tiendas, onGuardar, onCerrar }) {
   // Valores por defecto para nuevos items
   const defaultValues = {
     activo: true,
@@ -861,26 +865,29 @@ function ModalEdicion({ seccion, item, categorias, tiendas, onGuardar, onCerrar 
   };
 
   return (
-    <div className="fixed top-0 left-0 right-0 bottom-0 bg-black bg-opacity-70 flex items-start justify-center pt-4 pb-4 px-3 overflow-y-auto" style={{ zIndex: 99999 }}>
-      <div className="bg-white rounded-xl w-full max-w-md my-auto">
-        <div className="flex items-center justify-between p-4 border-b bg-gray-50 rounded-t-xl">
-          <h3 className="text-lg font-bold text-[#3d2314]">
-            {item.id ? 'Editar' : 'Nuevo'} {seccion.slice(0, -1)}
-          </h3>
-          <button
-            type="button"
-            onClick={onCerrar}
-            className="w-10 h-10 flex items-center justify-center rounded-full bg-red-500 text-white text-xl font-bold"
-          >
-            X
-          </button>
-        </div>
-        <div className="p-4 max-h-[70vh] overflow-y-auto">
-          {cargandoTiendas && (
-            <div className="text-center py-4 text-gray-500">
-              Cargando datos...
-            </div>
-          )}
+    <>
+      {/* Header fijo */}
+      <div className="sticky top-0 bg-[#3d2314] text-white p-4 flex items-center justify-between z-10">
+        <button
+          type="button"
+          onClick={onCerrar}
+          className="px-4 py-2 bg-white/20 rounded-lg font-medium"
+        >
+          ← Volver
+        </button>
+        <h3 className="text-lg font-bold">
+          {item.id ? 'Editar' : 'Nuevo'} {seccion.slice(0, -1)}
+        </h3>
+        <div className="w-20"></div>
+      </div>
+
+      {/* Contenido */}
+      <div className="p-4">
+        {cargandoTiendas && (
+          <div className="text-center py-4 text-gray-500">
+            Cargando datos...
+          </div>
+        )}
 
         <form onSubmit={handleSubmit}>
           {campos[seccion]?.map((campo) => (
@@ -1070,24 +1077,23 @@ function ModalEdicion({ seccion, item, categorias, tiendas, onGuardar, onCerrar 
             </div>
           ))}
 
-          <div className="flex gap-3 mt-6">
+          <div className="flex gap-3 mt-6 sticky bottom-0 bg-white py-4 border-t">
             <button
               type="button"
               onClick={onCerrar}
-              className="flex-1 py-3 bg-gray-200 text-gray-700 rounded-xl font-medium hover:bg-gray-300"
+              className="flex-1 py-4 bg-gray-200 text-gray-700 rounded-xl font-medium text-lg"
             >
               Cancelar
             </button>
             <button
               type="submit"
-              className="flex-1 py-3 bg-[#4a9b8c] text-white rounded-xl font-medium hover:bg-[#3d8577]"
+              className="flex-1 py-4 bg-[#4a9b8c] text-white rounded-xl font-medium text-lg"
             >
               Guardar
             </button>
           </div>
         </form>
-        </div>
       </div>
-    </div>
+    </>
   );
 }

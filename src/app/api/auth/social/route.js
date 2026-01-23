@@ -11,85 +11,64 @@ export async function POST(request) {
       return NextResponse.json({ error: 'Datos incompletos' }, { status: 400 });
     }
 
-    // Verificar si las columnas auth_id y email existen
-    let columnasExisten = false;
-    try {
-      const { data: columnas } = await supabase.rpc('get_columns_info', { table_name: 'clientes' });
-      columnasExisten = columnas?.some(c => c.column_name === 'auth_id');
-    } catch {
-      // Si falla el RPC, intentamos directamente
-      const { error: testError } = await supabase
-        .from('clientes')
-        .select('auth_id')
-        .limit(1);
-      columnasExisten = !testError;
-    }
-
     let cliente = null;
 
-    if (columnasExisten) {
-      // Buscar cliente existente por auth_id
-      const { data: clientePorAuth } = await supabase
+    // Buscar cliente existente por auth_id
+    const { data: clientePorAuth, error: authError } = await supabase
+      .from('clientes')
+      .select('*')
+      .eq('auth_id', auth_id)
+      .maybeSingle();
+
+    if (authError) {
+      console.error('Error buscando por auth_id:', authError);
+    }
+
+    if (clientePorAuth) {
+      cliente = clientePorAuth;
+    } else {
+      // Buscar por email
+      const { data: clientePorEmail, error: emailError } = await supabase
         .from('clientes')
         .select('*')
-        .eq('auth_id', auth_id)
+        .eq('email', email)
         .maybeSingle();
 
-      if (clientePorAuth) {
-        cliente = clientePorAuth;
-      } else {
-        // Buscar por email
-        const { data: clientePorEmail } = await supabase
-          .from('clientes')
-          .select('*')
-          .eq('email', email)
-          .maybeSingle();
-
-        if (clientePorEmail) {
-          // Vincular cuenta existente
-          const { data: updated } = await supabase
-            .from('clientes')
-            .update({ auth_id, avatar_url })
-            .eq('id', clientePorEmail.id)
-            .select()
-            .single();
-          cliente = updated || clientePorEmail;
-        }
+      if (emailError) {
+        console.error('Error buscando por email:', emailError);
       }
 
-      // Si no existe, crear nuevo
-      if (!cliente) {
-        const { data: nuevo, error: insertError } = await supabase
+      if (clientePorEmail) {
+        // Vincular cuenta existente con auth_id
+        const { data: updated, error: updateError } = await supabase
           .from('clientes')
-          .insert([{ nombre, email, auth_id, avatar_url, puntos: 0 }])
+          .update({ auth_id, avatar_url })
+          .eq('id', clientePorEmail.id)
           .select()
           .single();
 
-        if (insertError) {
-          console.error('Error insertando cliente completo:', insertError);
+        if (updateError) {
+          console.error('Error actualizando:', updateError);
+          cliente = clientePorEmail;
         } else {
-          cliente = nuevo;
+          cliente = updated;
         }
       }
     }
 
-    // Fallback: crear cliente con campos mínimos
+    // Si no existe, crear nuevo cliente
     if (!cliente) {
-      console.log('Usando fallback - creando cliente con campos mínimos');
-      const { data: minimo, error: minError } = await supabase
+      const { data: nuevo, error: insertError } = await supabase
         .from('clientes')
-        .insert([{ nombre, puntos: 0 }])
+        .insert([{ nombre, email, auth_id, avatar_url, puntos: 0 }])
         .select()
         .single();
 
-      if (minError) {
-        console.error('Error creando cliente mínimo:', minError);
-        return NextResponse.json({
-          error: 'No se pudo crear cliente. Ejecuta el SQL en Supabase para agregar columnas auth_id, email, avatar_url',
-          details: minError.message
-        }, { status: 500 });
+      if (insertError) {
+        console.error('Error insertando cliente:', insertError);
+        return NextResponse.json({ error: insertError.message }, { status: 500 });
       }
-      cliente = minimo;
+      cliente = nuevo;
     }
 
     const { pin, ...clienteSinPin } = cliente;

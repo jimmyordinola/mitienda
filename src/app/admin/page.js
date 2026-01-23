@@ -579,14 +579,10 @@ export default function AdminPage() {
                         <tr key={item.id} className="border-b hover:bg-gray-50">
                           <td className="py-3 px-4">{item.id}</td>
                           <td className="py-3 px-4">
-                            {(seccion === 'sabores' || seccion === 'toppings' || seccion === 'categorias') ? (
-                              <div className="flex items-center gap-2">
-                                {item.imagen && <img src={item.imagen} alt="" className="w-8 h-8 rounded-full object-cover" />}
-                                <span className="font-medium">{item.nombre}</span>
-                              </div>
-                            ) : (
-                              <>{item.imagen || item.emoji} {item.nombre || item.titulo}</>
-                            )}
+                            <div className="flex items-center gap-2">
+                              {item.imagen && <img src={item.imagen} alt="" className="w-8 h-8 rounded-full object-cover" />}
+                              <span className="font-medium">{item.nombre || item.titulo || item.codigo}</span>
+                            </div>
                           </td>
                           {seccion === 'productos' && (
                             <td className="py-3 px-4">S/{item.precio}</td>

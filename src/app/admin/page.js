@@ -337,6 +337,7 @@ export default function AdminPage() {
                 { id: 'promociones', nombre: 'Promociones', emoji: '🎉' },
                 { id: 'cupones', nombre: 'Cupones', emoji: '🎟️' },
                 { id: 'banners', nombre: 'Banners', emoji: '🖼️' },
+                { id: 'ventas', nombre: 'Pedidos', emoji: '🧾' },
                 { id: 'tiendas', nombre: 'Tiendas', emoji: '🏪' },
               ].map((item) => (
                 <button
@@ -514,6 +515,68 @@ export default function AdminPage() {
                 {!productoSeleccionado && (
                   <div className="text-center py-12 text-gray-500">
                     Selecciona un producto para ver y configurar sus tiendas
+                  </div>
+                )}
+              </div>
+            ) : seccion === 'ventas' ? (
+              /* Vista especial para ver pedidos/ventas */
+              <div className="bg-white rounded-xl shadow-lg p-6">
+                <h2 className="text-2xl font-bold text-[#3d2314] mb-6">🧾 Pedidos Realizados</h2>
+
+                {cargando ? (
+                  <div className="text-center py-12">Cargando pedidos...</div>
+                ) : datos.length === 0 ? (
+                  <div className="text-center py-12 text-gray-500">No hay pedidos registrados</div>
+                ) : (
+                  <div className="space-y-4">
+                    {datos.map((venta) => (
+                      <div key={venta.id} className="border rounded-xl p-4 hover:shadow-md transition-shadow">
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-3">
+                          <div>
+                            <span className="font-bold text-[#3d2314]">Pedido #{venta.id}</span>
+                            <span className="ml-3 text-sm text-gray-500">
+                              {new Date(venta.created_at).toLocaleString('es-PE')}
+                            </span>
+                          </div>
+                          <div className="text-xl font-bold text-[#4a9b8c]">
+                            S/{venta.total?.toFixed(2) || '0.00'}
+                          </div>
+                        </div>
+
+                        {venta.clientes && (
+                          <div className="mb-3 p-2 bg-gray-50 rounded-lg">
+                            <span className="text-sm text-gray-600">👤 Cliente: </span>
+                            <span className="font-medium">{venta.clientes.nombre}</span>
+                            <span className="text-sm text-gray-500 ml-2">({venta.clientes.telefono})</span>
+                          </div>
+                        )}
+
+                        {venta.detalles && venta.detalles.length > 0 && (
+                          <div className="border-t pt-3">
+                            <p className="text-sm font-medium text-gray-600 mb-2">Productos:</p>
+                            <div className="space-y-2">
+                              {venta.detalles.map((detalle, idx) => (
+                                <div key={idx} className="flex items-center justify-between text-sm">
+                                  <div className="flex items-center gap-2">
+                                    {detalle.productos?.imagen && (
+                                      <img src={detalle.productos.imagen} alt="" className="w-8 h-8 rounded object-cover" />
+                                    )}
+                                    <span>{detalle.cantidad}x {detalle.productos?.nombre || 'Producto'}</span>
+                                  </div>
+                                  <span className="font-medium">S/{(detalle.precio_unitario * detalle.cantidad).toFixed(2)}</span>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+
+                        {venta.puntos_ganados > 0 && (
+                          <div className="mt-3 text-sm text-[#4a9b8c]">
+                            ⭐ +{venta.puntos_ganados} puntos ganados
+                          </div>
+                        )}
+                      </div>
+                    ))}
                   </div>
                 )}
               </div>

@@ -522,15 +522,13 @@ export default function AdminPage() {
               <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6">
                 <h2 className="text-2xl font-bold text-[#3d2314] capitalize">{seccion}</h2>
                 <div className="flex items-center gap-3 w-full sm:w-auto">
-                  {(seccion === 'sabores' || seccion === 'toppings' || seccion === 'productos') && (
-                    <input
-                      type="text"
-                      placeholder="Buscar..."
-                      value={filtro}
-                      onChange={(e) => setFiltro(e.target.value)}
-                      className="flex-1 sm:w-48 px-3 py-2 border-2 rounded-lg focus:border-[#4a9b8c] focus:outline-none text-sm"
-                    />
-                  )}
+                  <input
+                    type="text"
+                    placeholder="Buscar..."
+                    value={filtro}
+                    onChange={(e) => setFiltro(e.target.value)}
+                    className="flex-1 sm:w-48 px-3 py-2 border-2 rounded-lg focus:border-[#4a9b8c] focus:outline-none text-sm"
+                  />
                   <button
                     onClick={() => setModal({ abierto: true, tipo: 'crear', item: {} })}
                     className="px-4 py-2 bg-[#4a9b8c] text-white rounded-lg font-medium hover:bg-[#3d8577] whitespace-nowrap"

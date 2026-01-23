@@ -14,7 +14,7 @@ export async function GET() {
   const { data, error } = await supabaseAdmin
     .from('clientes')
     .select('*')
-    .order('created_at', { ascending: false });
+    .order('id', { ascending: false });
 
   if (error) {
     console.error('Error fetching clientes:', error);

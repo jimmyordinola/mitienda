@@ -829,6 +829,12 @@ function FormularioEdicion({ seccion, item, categorias, tiendas, productos = [],
           if (Array.isArray(data)) {
             setTiendasSeleccionadas(data.map(tt => tt.tienda_id));
           }
+        } else if (seccion === 'promociones') {
+          const res = await fetch(`/api/admin/promociones-tiendas?promocion_id=${item.id}`);
+          const data = await res.json();
+          if (Array.isArray(data)) {
+            setTiendasSeleccionadas(data.map(pt => pt.tienda_id));
+          }
         }
       } catch (e) {
         console.error('Error cargando tiendas:', e);
@@ -915,8 +921,8 @@ function FormularioEdicion({ seccion, item, categorias, tiendas, productos = [],
       });
       return;
     }
-    // Para sabores y toppings, agregar tiendas_ids (puede estar vacío = global)
-    if (seccion === 'sabores' || seccion === 'toppings') {
+    // Para sabores, toppings y promociones, agregar tiendas_ids (puede estar vacío = global)
+    if (seccion === 'sabores' || seccion === 'toppings' || seccion === 'promociones') {
       onGuardar({
         ...formData,
         tiendas_ids: tiendasSeleccionadas
@@ -974,7 +980,7 @@ function FormularioEdicion({ seccion, item, categorias, tiendas, productos = [],
       { name: 'tipo', label: 'Tipo', type: 'select', options: ['2x1', 'descuento', 'combo', 'puntos_extra'] },
       { name: 'valor', label: 'Valor (% para descuento)', type: 'number' },
       { name: 'producto_id', label: 'Producto', type: 'producto_select', required: true },
-      { name: 'tienda_id', label: 'Tienda (vacio = todas)', type: 'tienda_select' },
+      { name: 'tiendas_ids', label: 'Tiendas (vacio = todas)', type: 'tiendas_multi_select_simple' },
       { name: 'imagen', label: 'Imagen', type: 'image_upload' },
       { name: 'fecha_inicio', label: 'Fecha Inicio', type: 'date' },
       { name: 'fecha_fin', label: 'Fecha Fin', type: 'date' },

@@ -23,7 +23,7 @@ export async function GET(request) {
 
 // POST - Crear promoción
 export async function POST(request) {
-  const promocion = await request.json();
+  const { tiendas_ids, categorias, tiendas, ...promocion } = await request.json();
 
   const { data, error } = await supabase
     .from('promociones')
@@ -35,12 +35,21 @@ export async function POST(request) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
+  // Asignar promocion a las tiendas seleccionadas
+  if (tiendas_ids && tiendas_ids.length > 0) {
+    const asignaciones = tiendas_ids.map(tid => ({
+      promocion_id: data.id,
+      tienda_id: tid
+    }));
+    await supabase.from('promociones_tiendas').insert(asignaciones);
+  }
+
   return NextResponse.json(data);
 }
 
 // PUT - Actualizar promocion
 export async function PUT(request) {
-  const { id, categorias, tiendas, ...promocion } = await request.json();
+  const { id, categorias, tiendas, tiendas_ids, ...promocion } = await request.json();
 
   // Limpiar campos vacios o undefined
   const cleanPromocion = {};
@@ -61,6 +70,21 @@ export async function PUT(request) {
 
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });
+  }
+
+  // Actualizar asignaciones de tiendas
+  if (tiendas_ids !== undefined) {
+    // Eliminar asignaciones existentes
+    await supabase.from('promociones_tiendas').delete().eq('promocion_id', id);
+
+    // Crear nuevas asignaciones
+    if (tiendas_ids && tiendas_ids.length > 0) {
+      const asignaciones = tiendas_ids.map(tid => ({
+        promocion_id: id,
+        tienda_id: tid
+      }));
+      await supabase.from('promociones_tiendas').insert(asignaciones);
+    }
   }
 
   return NextResponse.json(data);

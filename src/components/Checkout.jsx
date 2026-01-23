@@ -1,10 +1,27 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 
 export default function Checkout({ items, cliente, tienda, descuentoPromo = 0, onCompletado, onCancelar }) {
   const [usarPuntos, setUsarPuntos] = useState(0);
   const [procesando, setProcesando] = useState(false);
+  const [metodoPago, setMetodoPago] = useState('tienda'); // tienda, tarjeta, yape
+  const [culqiReady, setCulqiReady] = useState(false);
+
+  // Cargar script de Culqi
+  useEffect(() => {
+    if (typeof window !== 'undefined' && !window.Culqi) {
+      const script = document.createElement('script');
+      script.src = 'https://checkout.culqi.com/js/v4';
+      script.async = true;
+      script.onload = () => {
+        setCulqiReady(true);
+      };
+      document.body.appendChild(script);
+    } else if (window.Culqi) {
+      setCulqiReady(true);
+    }
+  }, []);
 
   // Si no hay cliente logueado, no mostrar checkout
   if (!cliente) {
@@ -18,7 +35,125 @@ export default function Checkout({ items, cliente, tienda, descuentoPromo = 0, o
   const puntosGanar = Math.floor(total / 10);
   const maxPuntosUsar = Math.min(cliente.puntos, totalConPromo);
 
-  const procesarPago = async () => {
+  // Configurar Culqi
+  const configurarCulqi = () => {
+    if (!window.Culqi) return;
+
+    window.Culqi.publicKey = process.env.NEXT_PUBLIC_CULQI_PUBLIC_KEY;
+    window.Culqi.settings({
+      title: 'El Chalan',
+      currency: 'PEN',
+      amount: Math.round(total * 100), // En centavos
+      order: `orden-${Date.now()}`
+    });
+
+    window.Culqi.options({
+      lang: 'es',
+      installments: false,
+      paymentMethods: {
+        tarjeta: true,
+        yape: metodoPago === 'yape',
+        bancaMovil: false,
+        agente: false,
+        billetera: metodoPago === 'yape',
+        cuotealo: false
+      },
+      style: {
+        logo: '/images/logo.png',
+        bannerColor: '#3d2314',
+        buttonBackground: '#c53030',
+        buttonText: 'Pagar S/' + total.toFixed(2),
+        buttonTextColor: '#ffffff'
+      }
+    });
+  };
+
+  // Procesar pago con Culqi
+  const procesarPagoCulqi = async (token) => {
+    setProcesando(true);
+    try {
+      // 1. Crear cargo en Culqi
+      const resCulqi = await fetch('/api/pagos/culqi', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          token: token,
+          amount: total,
+          email: cliente.email || `${cliente.telefono}@elchalan.pe`,
+          description: `Pedido El Chalan - ${tienda?.nombre || 'Tienda'}`,
+          metadata: {
+            cliente_id: cliente.id,
+            nombre: cliente.nombre,
+            telefono: cliente.telefono,
+            tienda_id: tienda?.id
+          }
+        })
+      });
+
+      const dataCulqi = await resCulqi.json();
+
+      if (!resCulqi.ok) {
+        throw new Error(dataCulqi.error || 'Error procesando el pago');
+      }
+
+      // 2. Registrar venta
+      const resVenta = await fetch('/api/ventas', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          cliente_id: cliente.id,
+          tienda_id: tienda?.id,
+          items,
+          total: subtotal,
+          descuento: descuentoPromo,
+          usar_puntos: usarPuntos,
+          metodo_pago: metodoPago === 'yape' ? 'yape' : 'tarjeta',
+          referencia_pago: dataCulqi.charge_id
+        })
+      });
+
+      if (resVenta.ok) {
+        const resultado = await resVenta.json();
+        onCompletado({
+          ...resultado,
+          metodo_pago: metodoPago === 'yape' ? 'Yape' : 'Tarjeta'
+        });
+      } else {
+        const error = await resVenta.json();
+        alert(error.error || 'Error al registrar el pedido');
+      }
+    } catch (e) {
+      alert(e.message || 'Error procesando el pago');
+    }
+    setProcesando(false);
+  };
+
+  // Abrir Culqi Checkout
+  const abrirCulqi = () => {
+    if (!culqiReady || !window.Culqi) {
+      alert('El sistema de pago no esta listo. Intenta de nuevo.');
+      return;
+    }
+
+    configurarCulqi();
+
+    // Handler global para respuesta de Culqi
+    window.culqi = function() {
+      if (window.Culqi.token) {
+        // Token creado exitosamente
+        procesarPagoCulqi(window.Culqi.token.id);
+      } else if (window.Culqi.error) {
+        // Error en el proceso
+        alert(window.Culqi.error.user_message || 'Error procesando el pago');
+      }
+    };
+
+    // Abrir checkout de Culqi
+    window.Culqi.open();
+  };
+
+  // Procesar pago en tienda
+  const procesarPagoTienda = async () => {
     setProcesando(true);
 
     try {
@@ -27,32 +162,46 @@ export default function Checkout({ items, cliente, tienda, descuentoPromo = 0, o
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           cliente_id: cliente.id,
+          tienda_id: tienda?.id,
           items,
           total: subtotal,
           descuento: descuentoPromo,
-          usar_puntos: usarPuntos
+          usar_puntos: usarPuntos,
+          metodo_pago: 'efectivo'
         })
       });
 
       if (res.ok) {
         const resultado = await res.json();
-        onCompletado(resultado);
+        onCompletado({
+          ...resultado,
+          metodo_pago: 'Pago en tienda'
+        });
       } else {
         const error = await res.json();
-        alert(error.error || 'Error al procesar el pago');
+        alert(error.error || 'Error al procesar el pedido');
       }
     } catch (e) {
-      alert('Error de conexión');
+      alert('Error de conexion');
     }
 
     setProcesando(false);
+  };
+
+  // Handler del boton de pago
+  const handlePagar = () => {
+    if (metodoPago === 'tienda') {
+      procesarPagoTienda();
+    } else {
+      abrirCulqi();
+    }
   };
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
       <div className="bg-white rounded-2xl p-6 w-full max-w-md max-h-[90vh] overflow-y-auto">
         <div className="text-center mb-4">
-          <img src="/images/logo.png" alt="El Chalán" className="h-16 mx-auto" />
+          <img src="/images/logo.png" alt="El Chalan" className="h-16 mx-auto" />
         </div>
         <h2 className="text-2xl font-bold text-[#3d2314] mb-4 text-center">Confirmar Pedido</h2>
 
@@ -86,10 +235,10 @@ export default function Checkout({ items, cliente, tienda, descuentoPromo = 0, o
             <span>S/{subtotal.toFixed(2)}</span>
           </div>
 
-          {/* Descuento promoción */}
+          {/* Descuento promocion */}
           {descuentoPromo > 0 && (
             <div className="flex justify-between text-sm text-green-600 font-medium">
-              <span>🎉 Descuento promoción:</span>
+              <span>Descuento promocion:</span>
               <span>-S/{descuentoPromo.toFixed(2)}</span>
             </div>
           )}
@@ -99,7 +248,7 @@ export default function Checkout({ items, cliente, tienda, descuentoPromo = 0, o
         {cliente.puntos > 0 && (
           <div className="bg-[#4a9b8c]/10 rounded-xl p-4 mb-4">
             <h3 className="font-semibold text-[#3d2314] mb-2">
-              🎁 Usar puntos ({cliente.puntos} disponibles)
+              Usar puntos ({cliente.puntos} disponibles)
             </h3>
             <p className="text-xs text-[#4a9b8c] mb-2">1 punto = S/1 de descuento</p>
             <input
@@ -116,6 +265,63 @@ export default function Checkout({ items, cliente, tienda, descuentoPromo = 0, o
             </div>
           </div>
         )}
+
+        {/* Metodo de pago */}
+        <div className="mb-4">
+          <h3 className="font-semibold text-[#3d2314] mb-3">Metodo de pago</h3>
+          <div className="grid grid-cols-3 gap-2">
+            {/* Pago en tienda */}
+            <button
+              onClick={() => setMetodoPago('tienda')}
+              className={`p-3 rounded-xl border-2 transition-all ${
+                metodoPago === 'tienda'
+                  ? 'border-[#4a9b8c] bg-[#4a9b8c]/10'
+                  : 'border-gray-200 hover:border-gray-300'
+              }`}
+            >
+              <div className="text-2xl mb-1">🏪</div>
+              <p className="text-xs font-medium text-[#3d2314]">En tienda</p>
+            </button>
+
+            {/* Tarjeta */}
+            <button
+              onClick={() => setMetodoPago('tarjeta')}
+              className={`p-3 rounded-xl border-2 transition-all ${
+                metodoPago === 'tarjeta'
+                  ? 'border-[#4a9b8c] bg-[#4a9b8c]/10'
+                  : 'border-gray-200 hover:border-gray-300'
+              }`}
+            >
+              <div className="text-2xl mb-1">💳</div>
+              <p className="text-xs font-medium text-[#3d2314]">Tarjeta</p>
+            </button>
+
+            {/* Yape */}
+            <button
+              onClick={() => setMetodoPago('yape')}
+              className={`p-3 rounded-xl border-2 transition-all ${
+                metodoPago === 'yape'
+                  ? 'border-[#4a9b8c] bg-[#4a9b8c]/10'
+                  : 'border-gray-200 hover:border-gray-300'
+              }`}
+            >
+              <div className="flex justify-center mb-1">
+                <svg width="28" height="28" viewBox="0 0 24 24" fill="none">
+                  <rect width="24" height="24" rx="6" fill="#6B2D8B"/>
+                  <path d="M7 8L12 16L17 8" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
+                </svg>
+              </div>
+              <p className="text-xs font-medium text-[#3d2314]">Yape</p>
+            </button>
+          </div>
+
+          {/* Mensaje segun metodo */}
+          <p className="text-xs text-gray-500 mt-2 text-center">
+            {metodoPago === 'tienda' && 'Paga cuando recojas tu pedido'}
+            {metodoPago === 'tarjeta' && 'Visa, Mastercard, American Express'}
+            {metodoPago === 'yape' && 'Paga con tu billetera Yape'}
+          </p>
+        </div>
 
         {/* Total */}
         <div className="bg-[#3d2314] rounded-xl p-4 mb-4 text-white">
@@ -138,13 +344,42 @@ export default function Checkout({ items, cliente, tienda, descuentoPromo = 0, o
             Cancelar
           </button>
           <button
-            onClick={procesarPago}
-            disabled={procesando}
-            className="flex-1 py-3 bg-[#c53030] text-white rounded-xl font-bold hover:bg-[#9b2c2c] hover:scale-[1.02] transition-all disabled:opacity-50"
+            onClick={handlePagar}
+            disabled={procesando || (metodoPago !== 'tienda' && !culqiReady)}
+            className="flex-1 py-3 bg-[#c53030] text-white rounded-xl font-bold hover:bg-[#9b2c2c] hover:scale-[1.02] transition-all disabled:opacity-50 flex items-center justify-center gap-2"
           >
-            {procesando ? 'Procesando...' : 'Pagar'}
+            {procesando ? (
+              'Procesando...'
+            ) : (
+              <>
+                {metodoPago === 'tienda' && 'Confirmar Pedido'}
+                {metodoPago === 'tarjeta' && (
+                  <>
+                    <span>💳</span> Pagar
+                  </>
+                )}
+                {metodoPago === 'yape' && (
+                  <>
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+                      <rect width="24" height="24" rx="6" fill="#6B2D8B"/>
+                      <path d="M7 8L12 16L17 8" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
+                    </svg>
+                    Pagar con Yape
+                  </>
+                )}
+              </>
+            )}
           </button>
         </div>
+
+        {/* Logos de seguridad */}
+        {metodoPago !== 'tienda' && (
+          <div className="mt-4 flex items-center justify-center gap-4 opacity-60">
+            <img src="https://culqi.com/wp-content/uploads/2021/03/visa.png" alt="Visa" className="h-6" />
+            <img src="https://culqi.com/wp-content/uploads/2021/03/mastercard.png" alt="Mastercard" className="h-6" />
+            <span className="text-xs text-gray-500">Pago seguro con Culqi</span>
+          </div>
+        )}
       </div>
     </div>
   );

@@ -657,7 +657,11 @@ export default function AdminPage() {
                           <td className="py-3 px-4">{item.id}</td>
                           <td className="py-3 px-4">
                             <div className="flex items-center gap-2">
-                              {item.imagen && <img src={item.imagen} alt="" className="w-8 h-8 rounded-full object-cover" />}
+                              {item.imagen && (item.imagen.startsWith('http') || item.imagen.startsWith('/')) ? (
+                                <img src={item.imagen} alt="" className="w-8 h-8 rounded-full object-cover" />
+                              ) : item.imagen ? (
+                                <span className="text-xl">{item.imagen}</span>
+                              ) : null}
                               <span className="font-medium">{item.nombre || item.titulo || item.codigo}</span>
                             </div>
                           </td>

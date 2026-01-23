@@ -5,12 +5,17 @@ import MasPedido from './MasPedido';
 import Categorias from './Categorias';
 import ModalPersonalizacion from './ModalPersonalizacion';
 
-export default function Catalogo({ onAgregarCarrito, tiendaId }) {
+export default function Catalogo({ onAgregarCarrito, tiendaId, promociones = [] }) {
   const [productos, setProductos] = useState([]);
   const [categoriaActiva, setCategoriaActiva] = useState(null);
   const [categoriaInfo, setCategoriaInfo] = useState(null);
   const [cargando, setCargando] = useState(false);
   const [productoPersonalizar, setProductoPersonalizar] = useState(null);
+
+  // Función para obtener la promoción de un producto
+  const getPromocionProducto = (productoId) => {
+    return promociones.find(p => p.producto_id === productoId && p.activo);
+  };
 
   useEffect(() => {
     if (categoriaActiva) {
@@ -86,53 +91,73 @@ export default function Catalogo({ onAgregarCarrito, tiendaId }) {
             <p className="text-center text-gray-500 py-8">No hay productos en esta categoría</p>
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              {productos.map((producto) => (
-                <div
-                  key={producto.id}
-                  className="border-2 border-gray-100 rounded-xl p-4 hover:border-[#4a9b8c] hover:shadow-lg transition-all bg-gradient-to-br from-white to-gray-50"
-                >
-                  <div className="flex items-start gap-4">
-                    {producto.imagen_url ? (
-                      <img
-                        src={producto.imagen_url}
-                        alt={producto.nombre}
-                        className="w-20 h-20 object-cover rounded-lg"
-                        onError={(e) => {
-                          e.target.style.display = 'none';
-                          e.target.nextElementSibling.style.display = 'flex';
-                        }}
-                      />
-                    ) : null}
-                    <div className={`text-5xl ${producto.imagen_url ? 'hidden' : ''} w-20 h-20 bg-gray-100 rounded-lg flex items-center justify-center`}>
-                      {producto.imagen || producto.categorias?.emoji || '🍦'}
-                    </div>
-                    <div className="flex-1">
-                      <h4 className="font-bold text-[#3d2314] text-lg">{producto.nombre}</h4>
-                      <p className="text-sm text-gray-500 mb-2">{producto.descripcion}</p>
-
-                      {/* Indicador de producto personalizable */}
-                      {producto.personalizable && (
-                        <div className="flex items-center gap-1 text-xs text-[#4a9b8c] mb-2">
-                          <span>✨</span>
-                          <span>Personalizable - hasta {producto.max_sabores || 4} sabores</span>
-                        </div>
-                      )}
-
-                      <div className="flex items-center justify-between">
-                        <span className="text-2xl font-bold text-[#4a9b8c]">
-                          S/{producto.precio}
+              {productos.map((producto) => {
+                const promo = getPromocionProducto(producto.id);
+                return (
+                  <div
+                    key={producto.id}
+                    className={`relative border-2 rounded-xl p-4 hover:shadow-lg transition-all bg-gradient-to-br from-white to-gray-50 ${promo ? 'border-green-400 bg-green-50/30' : 'border-gray-100 hover:border-[#4a9b8c]'}`}
+                  >
+                    {/* Badge de promoción */}
+                    {promo && (
+                      <div className="absolute -top-2 -right-2 z-10">
+                        <span className={`px-2 py-1 text-xs font-bold text-white rounded-full shadow-lg ${promo.tipo === '2x1' ? 'bg-[#c53030]' : 'bg-green-500'}`}>
+                          {promo.tipo === '2x1' ? '2x1' : `-${promo.valor}%`}
                         </span>
-                        <button
-                          onClick={() => handleAgregar(producto)}
-                          className="px-4 py-2 bg-[#c53030] text-white rounded-lg text-sm font-bold hover:bg-[#9b2c2c] hover:scale-105 transition-all"
-                        >
-                          {producto.personalizable ? '✨ Personalizar' : '+ Agregar'}
-                        </button>
+                      </div>
+                    )}
+
+                    <div className="flex items-start gap-4">
+                      {producto.imagen_url ? (
+                        <img
+                          src={producto.imagen_url}
+                          alt={producto.nombre}
+                          className="w-20 h-20 object-cover rounded-lg"
+                          onError={(e) => {
+                            e.target.style.display = 'none';
+                            e.target.nextElementSibling.style.display = 'flex';
+                          }}
+                        />
+                      ) : null}
+                      <div className={`text-5xl ${producto.imagen_url ? 'hidden' : ''} w-20 h-20 bg-gray-100 rounded-lg flex items-center justify-center`}>
+                        {producto.imagen || producto.categorias?.emoji || '🍦'}
+                      </div>
+                      <div className="flex-1">
+                        <h4 className="font-bold text-[#3d2314] text-lg">{producto.nombre}</h4>
+                        <p className="text-sm text-gray-500 mb-2">{producto.descripcion}</p>
+
+                        {/* Indicador de promoción */}
+                        {promo && (
+                          <div className="flex items-center gap-1 text-xs text-green-600 font-medium mb-1">
+                            <span>🎉</span>
+                            <span>{promo.tipo === '2x1' ? 'Lleva 2, paga 1' : `${promo.valor}% de descuento`}</span>
+                          </div>
+                        )}
+
+                        {/* Indicador de producto personalizable */}
+                        {producto.personalizable && (
+                          <div className="flex items-center gap-1 text-xs text-[#4a9b8c] mb-2">
+                            <span>✨</span>
+                            <span>Personalizable - hasta {producto.max_sabores || 4} sabores</span>
+                          </div>
+                        )}
+
+                        <div className="flex items-center justify-between">
+                          <span className="text-2xl font-bold text-[#4a9b8c]">
+                            S/{producto.precio}
+                          </span>
+                          <button
+                            onClick={() => handleAgregar(producto)}
+                            className="px-4 py-2 bg-[#c53030] text-white rounded-lg text-sm font-bold hover:bg-[#9b2c2c] hover:scale-105 transition-all"
+                          >
+                            {producto.personalizable ? '✨ Personalizar' : '+ Agregar'}
+                          </button>
+                        </div>
                       </div>
                     </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </div>
@@ -160,6 +185,7 @@ export default function Catalogo({ onAgregarCarrito, tiendaId }) {
       <MasPedido
         tiendaId={tiendaId}
         onSeleccionar={(producto) => handleAgregar(producto)}
+        promociones={promociones}
       />
     </div>
   );

@@ -249,7 +249,7 @@ export default function Home() {
               promoAplicada={promoAplicada}
               onActivarPromo={activarPromocion}
             />
-            <Catalogo onAgregarCarrito={agregarAlCarrito} tiendaId={tiendaSeleccionada.id} />
+            <Catalogo onAgregarCarrito={agregarAlCarrito} tiendaId={tiendaSeleccionada.id} promociones={promociones} />
           </div>
 
           {/* Sidebar: Usuario + Carrito */}

@@ -857,43 +857,22 @@ function ModalEdicion({ seccion, item, categorias, tiendas, onGuardar, onCerrar 
     ],
   };
 
-  // Bloquear scroll del body cuando el modal está abierto
-  useEffect(() => {
-    document.body.style.overflow = 'hidden';
-    return () => {
-      document.body.style.overflow = '';
-    };
-  }, []);
-
   return (
-    <div
-      className="fixed inset-0 z-[9999] flex items-center justify-center"
-      style={{ touchAction: 'none' }}
-    >
-      {/* Overlay oscuro */}
-      <div
-        className="absolute inset-0 bg-black/60"
-        onClick={onCerrar}
-        style={{ touchAction: 'manipulation' }}
-      />
-
-      {/* Contenido del modal */}
-      <div
-        className="relative bg-white rounded-2xl p-5 w-[95%] max-w-lg max-h-[85vh] overflow-y-auto shadow-2xl"
-        style={{ touchAction: 'pan-y' }}
-      >
-        <div className="flex items-center justify-between mb-4 sticky top-0 bg-white pb-2 border-b">
+    <div className="fixed top-0 left-0 right-0 bottom-0 bg-black bg-opacity-70 flex items-start justify-center pt-4 pb-4 px-3 overflow-y-auto" style={{ zIndex: 99999 }}>
+      <div className="bg-white rounded-xl w-full max-w-md my-auto">
+        <div className="flex items-center justify-between p-4 border-b bg-gray-50 rounded-t-xl">
           <h3 className="text-lg font-bold text-[#3d2314]">
             {item.id ? 'Editar' : 'Nuevo'} {seccion.slice(0, -1)}
           </h3>
           <button
             type="button"
             onClick={onCerrar}
-            className="w-10 h-10 flex items-center justify-center rounded-full bg-red-100 hover:bg-red-200 text-red-600 text-xl font-bold"
+            className="w-10 h-10 flex items-center justify-center rounded-full bg-red-500 text-white text-xl font-bold"
           >
-            ✕
+            X
           </button>
         </div>
+        <div className="p-4 max-h-[70vh] overflow-y-auto">
 
         <form onSubmit={handleSubmit}>
           {campos[seccion]?.map((campo) => (
@@ -1099,6 +1078,7 @@ function ModalEdicion({ seccion, item, categorias, tiendas, onGuardar, onCerrar 
             </button>
           </div>
         </form>
+        </div>
       </div>
     </div>
   );

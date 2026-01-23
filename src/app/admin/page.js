@@ -537,7 +537,7 @@ export default function AdminPage() {
 
                 {cargando ? (
                   <div className="text-center py-12">Cargando pedidos...</div>
-                ) : datos.length === 0 ? (
+                ) : !Array.isArray(datos) || datos.length === 0 ? (
                   <div className="text-center py-12 text-gray-500">No hay pedidos registrados</div>
                 ) : (
                   <div className="space-y-4">

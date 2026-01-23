@@ -284,6 +284,7 @@ export default function AdminPage() {
             <h1 className="text-xl font-bold">Panel de Administración</h1>
           </div>
           <div className="flex items-center gap-4">
+            <span className="text-xs bg-yellow-500 text-black px-2 py-1 rounded">v2.0</span>
             <span className="text-sm">{admin.nombre}</span>
             <button
               onClick={() => setAdmin(null)}
@@ -296,10 +297,10 @@ export default function AdminPage() {
       </header>
 
       <div className="container mx-auto px-4 py-6">
-        <div className="flex gap-6">
+        <div className="flex flex-col lg:flex-row gap-6">
           {/* Sidebar */}
-          <aside className="w-64 bg-white rounded-xl shadow-lg p-4">
-            <nav className="space-y-2">
+          <aside className="w-full lg:w-64 bg-white rounded-xl shadow-lg p-4">
+            <nav className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-1 gap-2">
               {[
                 { id: 'productos', nombre: 'Productos', emoji: '📦' },
                 { id: 'categorias', nombre: 'Categorías', emoji: '📂' },
@@ -591,18 +592,20 @@ export default function AdminPage() {
                             </span>
                           </td>
                           <td className="py-3 px-4">
-                            <button
-                              onClick={() => setModal({ abierto: true, tipo: 'editar', item })}
-                              className="text-blue-600 hover:underline mr-3"
-                            >
-                              Editar
-                            </button>
-                            <button
-                              onClick={() => eliminarItem(item.id)}
-                              className="text-red-600 hover:underline"
-                            >
-                              Eliminar
-                            </button>
+                            <div className="flex flex-col sm:flex-row gap-2">
+                              <button
+                                onClick={() => setModal({ abierto: true, tipo: 'editar', item })}
+                                className="px-3 py-2 bg-blue-500 text-white text-sm rounded-lg font-medium active:bg-blue-700"
+                              >
+                                Editar
+                              </button>
+                              <button
+                                onClick={() => eliminarItem(item.id)}
+                                className="px-3 py-2 bg-red-500 text-white text-sm rounded-lg font-medium active:bg-red-700"
+                              >
+                                Eliminar
+                              </button>
+                            </div>
                           </td>
                         </tr>
                       )})}
@@ -622,23 +625,27 @@ export default function AdminPage() {
         </div>
       </div>
 
-      {/* Modal de edición */}
+      {/* Vista de edición (reemplaza contenido en móvil) */}
       {modal.abierto && (
-        <ModalEdicion
-          seccion={seccion}
-          item={modal.item}
-          categorias={categorias}
-          tiendas={tiendas}
-          onGuardar={guardarItem}
-          onCerrar={() => setModal({ abierto: false, tipo: null, item: null })}
-        />
+        <div className="fixed inset-0 bg-white z-50 overflow-auto lg:bg-black/50 lg:flex lg:items-center lg:justify-center lg:p-4">
+          <div className="bg-white w-full lg:max-w-lg lg:rounded-xl lg:max-h-[90vh] lg:overflow-auto">
+            <FormularioEdicion
+              seccion={seccion}
+              item={modal.item}
+              categorias={categorias}
+              tiendas={tiendas}
+              onGuardar={guardarItem}
+              onCerrar={() => setModal({ abierto: false, tipo: null, item: null })}
+            />
+          </div>
+        </div>
       )}
     </div>
   );
 }
 
-// Componente Modal
-function ModalEdicion({ seccion, item, categorias, tiendas, onGuardar, onCerrar }) {
+// Componente de Edición (pantalla completa en móvil, modal en desktop)
+function FormularioEdicion({ seccion, item, categorias, tiendas, onGuardar, onCerrar }) {
   // Valores por defecto para nuevos items
   const defaultValues = {
     activo: true,
@@ -649,43 +656,44 @@ function ModalEdicion({ seccion, item, categorias, tiendas, onGuardar, onCerrar 
   const [subiendo, setSubiendo] = useState(false);
   const [tiendasSeleccionadas, setTiendasSeleccionadas] = useState([]);
   const [tiendasDestacadas, setTiendasDestacadas] = useState([]);
+  const [cargandoTiendas, setCargandoTiendas] = useState(false);
 
   // Cargar tiendas asignadas si estamos editando
   useEffect(() => {
-    if (item?.id) {
-      if (seccion === 'productos') {
-        fetch(`/api/admin/productos-tiendas?producto_id=${item.id}`)
-          .then(res => res.json())
-          .then(data => {
-            if (Array.isArray(data)) {
-              setTiendasSeleccionadas(data.map(pt => pt.tienda_id));
-              setTiendasDestacadas(data.filter(pt => pt.destacado).map(pt => pt.tienda_id));
-            }
-          })
-          .catch(() => {
-            setTiendasSeleccionadas([]);
-            setTiendasDestacadas([]);
-          });
-      } else if (seccion === 'sabores') {
-        fetch(`/api/admin/sabores-tiendas?sabor_id=${item.id}`)
-          .then(res => res.json())
-          .then(data => {
-            if (Array.isArray(data)) {
-              setTiendasSeleccionadas(data.map(st => st.tienda_id));
-            }
-          })
-          .catch(() => setTiendasSeleccionadas([]));
-      } else if (seccion === 'toppings') {
-        fetch(`/api/admin/toppings-tiendas?topping_id=${item.id}`)
-          .then(res => res.json())
-          .then(data => {
-            if (Array.isArray(data)) {
-              setTiendasSeleccionadas(data.map(tt => tt.tienda_id));
-            }
-          })
-          .catch(() => setTiendasSeleccionadas([]));
+    if (!item?.id) return;
+
+    const cargarTiendas = async () => {
+      setCargandoTiendas(true);
+      try {
+        if (seccion === 'productos') {
+          const res = await fetch(`/api/admin/productos-tiendas?producto_id=${item.id}`);
+          const data = await res.json();
+          if (Array.isArray(data)) {
+            setTiendasSeleccionadas(data.map(pt => pt.tienda_id));
+            setTiendasDestacadas(data.filter(pt => pt.destacado).map(pt => pt.tienda_id));
+          }
+        } else if (seccion === 'sabores') {
+          const res = await fetch(`/api/admin/sabores-tiendas?sabor_id=${item.id}`);
+          const data = await res.json();
+          if (Array.isArray(data)) {
+            setTiendasSeleccionadas(data.map(st => st.tienda_id));
+          }
+        } else if (seccion === 'toppings') {
+          const res = await fetch(`/api/admin/toppings-tiendas?topping_id=${item.id}`);
+          const data = await res.json();
+          if (Array.isArray(data)) {
+            setTiendasSeleccionadas(data.map(tt => tt.tienda_id));
+          }
+        }
+      } catch (e) {
+        console.error('Error cargando tiendas:', e);
+        setTiendasSeleccionadas([]);
+        setTiendasDestacadas([]);
       }
-    }
+      setCargandoTiendas(false);
+    };
+
+    cargarTiendas();
   }, [seccion, item?.id]);
 
   const toggleTienda = (tiendaId) => {
@@ -858,11 +866,29 @@ function ModalEdicion({ seccion, item, categorias, tiendas, onGuardar, onCerrar 
   };
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
-      <div className="bg-white rounded-2xl p-6 w-full max-w-lg max-h-[90vh] overflow-y-auto">
-        <h3 className="text-xl font-bold text-[#3d2314] mb-4">
+    <>
+      {/* Header fijo */}
+      <div className="sticky top-0 bg-[#3d2314] text-white p-4 flex items-center justify-between z-10">
+        <button
+          type="button"
+          onClick={onCerrar}
+          className="px-4 py-2 bg-white/20 rounded-lg font-medium"
+        >
+          ← Volver
+        </button>
+        <h3 className="text-lg font-bold">
           {item.id ? 'Editar' : 'Nuevo'} {seccion.slice(0, -1)}
         </h3>
+        <div className="w-20"></div>
+      </div>
+
+      {/* Contenido */}
+      <div className="p-4">
+        {cargandoTiendas && (
+          <div className="text-center py-4 text-gray-500">
+            Cargando datos...
+          </div>
+        )}
 
         <form onSubmit={handleSubmit}>
           {campos[seccion]?.map((campo) => (
@@ -1052,23 +1078,23 @@ function ModalEdicion({ seccion, item, categorias, tiendas, onGuardar, onCerrar 
             </div>
           ))}
 
-          <div className="flex gap-3 mt-6">
+          <div className="flex gap-3 mt-6 sticky bottom-0 bg-white py-4 border-t">
             <button
               type="button"
               onClick={onCerrar}
-              className="flex-1 py-3 bg-gray-200 text-gray-700 rounded-xl font-medium hover:bg-gray-300"
+              className="flex-1 py-4 bg-gray-200 text-gray-700 rounded-xl font-medium text-lg"
             >
               Cancelar
             </button>
             <button
               type="submit"
-              className="flex-1 py-3 bg-[#4a9b8c] text-white rounded-xl font-medium hover:bg-[#3d8577]"
+              className="flex-1 py-4 bg-[#4a9b8c] text-white rounded-xl font-medium text-lg"
             >
               Guardar
             </button>
           </div>
         </form>
       </div>
-    </div>
+    </>
   );
 }

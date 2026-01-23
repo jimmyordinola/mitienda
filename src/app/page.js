@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import SeleccionTienda from '@/components/SeleccionTienda';
 import Header from '@/components/Header';
 import Login from '@/components/Login';
@@ -8,6 +8,7 @@ import Catalogo from '@/components/Catalogo';
 import Carrito from '@/components/Carrito';
 import Checkout from '@/components/Checkout';
 import Footer from '@/components/Footer';
+import { supabaseBrowser, signOut } from '@/lib/supabase-browser';
 
 export default function Home() {
   const [tiendaSeleccionada, setTiendaSeleccionada] = useState(null);
@@ -16,6 +17,60 @@ export default function Home() {
   const [mostrarCheckout, setMostrarCheckout] = useState(false);
   const [ventaCompletada, setVentaCompletada] = useState(null);
   const [mostrarLogin, setMostrarLogin] = useState(false);
+  const [authUser, setAuthUser] = useState(null);
+
+  useEffect(() => {
+    const { data: { subscription } } = supabaseBrowser.auth.onAuthStateChange(
+      async (event, session) => {
+        if (session?.user) {
+          setAuthUser(session.user);
+          await vincularClienteSocial(session.user);
+          setMostrarLogin(false);
+        } else {
+          setAuthUser(null);
+        }
+      }
+    );
+
+    supabaseBrowser.auth.getSession().then(({ data: { session } }) => {
+      if (session?.user) {
+        setAuthUser(session.user);
+        vincularClienteSocial(session.user);
+      }
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
+
+  const vincularClienteSocial = async (user) => {
+    try {
+      const res = await fetch('/api/auth/social', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          auth_id: user.id,
+          email: user.email,
+          nombre: user.user_metadata?.full_name || user.user_metadata?.name || user.email?.split('@')[0],
+          avatar_url: user.user_metadata?.avatar_url || user.user_metadata?.picture
+        })
+      });
+
+      if (res.ok) {
+        const clienteData = await res.json();
+        setCliente(clienteData);
+      }
+    } catch (error) {
+      console.error('Error vinculando cliente social:', error);
+    }
+  };
+
+  const handleLogout = async () => {
+    if (authUser) {
+      await signOut();
+      setAuthUser(null);
+    }
+    setCliente(null);
+  };
 
   // Si no hay tienda seleccionada, mostrar selección de tienda
   if (!tiendaSeleccionada) {
@@ -77,7 +132,7 @@ export default function Home() {
         carrito={carrito}
         tienda={tiendaSeleccionada}
         onLoginClick={() => setMostrarLogin(true)}
-        onLogout={() => setCliente(null)}
+        onLogout={handleLogout}
         onCambiarTienda={cambiarTienda}
       />
 

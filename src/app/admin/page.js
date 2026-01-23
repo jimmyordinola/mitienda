@@ -591,18 +591,20 @@ export default function AdminPage() {
                             </span>
                           </td>
                           <td className="py-3 px-4">
-                            <button
-                              onClick={() => setModal({ abierto: true, tipo: 'editar', item })}
-                              className="text-blue-600 hover:underline mr-3"
-                            >
-                              Editar
-                            </button>
-                            <button
-                              onClick={() => eliminarItem(item.id)}
-                              className="text-red-600 hover:underline"
-                            >
-                              Eliminar
-                            </button>
+                            <div className="flex flex-col sm:flex-row gap-2">
+                              <button
+                                onClick={() => setModal({ abierto: true, tipo: 'editar', item })}
+                                className="px-3 py-2 bg-blue-500 text-white text-sm rounded-lg font-medium active:bg-blue-700"
+                              >
+                                Editar
+                              </button>
+                              <button
+                                onClick={() => eliminarItem(item.id)}
+                                className="px-3 py-2 bg-red-500 text-white text-sm rounded-lg font-medium active:bg-red-700"
+                              >
+                                Eliminar
+                              </button>
+                            </div>
                           </td>
                         </tr>
                       )})}

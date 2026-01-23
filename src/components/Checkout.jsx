@@ -53,9 +53,23 @@ export default function Checkout({ items, cliente, onCompletado, onCancelar }) {
         <div className="bg-[#f5f0e8] rounded-xl p-4 mb-4">
           <h3 className="font-semibold text-[#3d2314] mb-2">Resumen</h3>
           {items.map((item) => (
-            <div key={item.id} className="flex justify-between text-sm py-1 text-[#3d2314]">
-              <span>{item.cantidad}x {item.nombre}</span>
-              <span>S/{((item.precioFinal || item.precio) * item.cantidad).toFixed(2)}</span>
+            <div key={item.id} className="py-2 border-b border-[#3d2314]/10 last:border-0">
+              <div className="flex justify-between text-sm text-[#3d2314]">
+                <span className="font-medium">{item.cantidad}x {item.nombre}</span>
+                <span className="font-bold">S/{((item.precioFinal || item.precio) * item.cantidad).toFixed(2)}</span>
+              </div>
+              {/* Mostrar sabores si existen */}
+              {item.personalizacion?.sabores?.length > 0 && (
+                <p className="text-xs text-gray-600 mt-1">
+                  <span className="font-medium">Sabores:</span> {item.personalizacion.sabores.map(s => s.nombre).join(', ')}
+                </p>
+              )}
+              {/* Mostrar toppings si existen */}
+              {item.personalizacion?.toppings?.length > 0 && (
+                <p className="text-xs text-gray-600">
+                  <span className="font-medium">Toppings:</span> {item.personalizacion.toppings.map(t => t.nombre).join(', ')}
+                </p>
+              )}
             </div>
           ))}
           <div className="border-t border-[#3d2314]/20 mt-2 pt-2 flex justify-between font-bold text-[#3d2314]">

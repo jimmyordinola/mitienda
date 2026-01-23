@@ -350,6 +350,7 @@ export default function AdminPage() {
                 { id: 'cupones', nombre: 'Cupones', emoji: '🎟️' },
                 { id: 'banners', nombre: 'Banners', emoji: '🖼️' },
                 { id: 'ventas', nombre: 'Pedidos', emoji: '🧾' },
+                { id: 'clientes', nombre: 'Clientes', emoji: '👥' },
                 { id: 'tiendas', nombre: 'Tiendas', emoji: '🏪' },
               ].map((item) => (
                 <button
@@ -527,6 +528,72 @@ export default function AdminPage() {
                 {!productoSeleccionado && (
                   <div className="text-center py-12 text-gray-500">
                     Selecciona un producto para ver y configurar sus tiendas
+                  </div>
+                )}
+              </div>
+            ) : seccion === 'clientes' ? (
+              /* Vista especial para ver clientes */
+              <div className="bg-white rounded-xl shadow-lg p-6">
+                <h2 className="text-2xl font-bold text-[#3d2314] mb-6">👥 Clientes Registrados</h2>
+
+                {cargando ? (
+                  <div className="text-center py-12">Cargando clientes...</div>
+                ) : !Array.isArray(datos) || datos.length === 0 ? (
+                  <div className="text-center py-12 text-gray-500">No hay clientes registrados</div>
+                ) : (
+                  <div className="overflow-x-auto">
+                    <table className="w-full">
+                      <thead>
+                        <tr className="border-b bg-gray-50">
+                          <th className="text-left py-3 px-4">ID</th>
+                          <th className="text-left py-3 px-4">Avatar</th>
+                          <th className="text-left py-3 px-4">Nombre</th>
+                          <th className="text-left py-3 px-4">Email</th>
+                          <th className="text-left py-3 px-4">Teléfono</th>
+                          <th className="text-left py-3 px-4">Puntos</th>
+                          <th className="text-left py-3 px-4">Tipo</th>
+                          <th className="text-left py-3 px-4">Registro</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {datos.map((cliente) => (
+                          <tr key={cliente.id} className="border-b hover:bg-gray-50">
+                            <td className="py-3 px-4 text-sm text-gray-500">{cliente.id}</td>
+                            <td className="py-3 px-4">
+                              {cliente.avatar_url ? (
+                                <img src={cliente.avatar_url} alt="" className="w-10 h-10 rounded-full object-cover" />
+                              ) : (
+                                <div className="w-10 h-10 rounded-full bg-[#4a9b8c] flex items-center justify-center text-white text-lg">
+                                  {cliente.nombre?.charAt(0)?.toUpperCase() || '?'}
+                                </div>
+                              )}
+                            </td>
+                            <td className="py-3 px-4 font-medium">{cliente.nombre || '-'}</td>
+                            <td className="py-3 px-4 text-sm">{cliente.email || '-'}</td>
+                            <td className="py-3 px-4 text-sm">{cliente.telefono || '-'}</td>
+                            <td className="py-3 px-4">
+                              <span className="px-2 py-1 bg-yellow-100 text-yellow-700 rounded-full text-sm font-medium">
+                                ⭐ {cliente.puntos || 0}
+                              </span>
+                            </td>
+                            <td className="py-3 px-4">
+                              {cliente.auth_id ? (
+                                <span className="px-2 py-1 bg-blue-100 text-blue-700 rounded text-xs font-medium">
+                                  Google
+                                </span>
+                              ) : (
+                                <span className="px-2 py-1 bg-gray-100 text-gray-600 rounded text-xs font-medium">
+                                  Tel/PIN
+                                </span>
+                              )}
+                            </td>
+                            <td className="py-3 px-4 text-sm text-gray-500">
+                              {cliente.created_at ? new Date(cliente.created_at).toLocaleDateString('es-PE') : '-'}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
                   </div>
                 )}
               </div>

@@ -18,6 +18,7 @@ export default function AdminPage() {
   const [filtro, setFiltro] = useState('');
   const [saboresTiendas, setSaboresTiendas] = useState({});
   const [toppingsTiendas, setToppingsTiendas] = useState({});
+  const [productosTiendasMap, setProductosTiendasMap] = useState({});
 
   // Login
   const [email, setEmail] = useState('');
@@ -97,6 +98,17 @@ export default function AdminPage() {
         });
         await Promise.all(promises);
         setToppingsTiendas(tiendasMap);
+      }
+      // Cargar tiendas asignadas para productos (en paralelo)
+      if (seccion === 'productos' && Array.isArray(data)) {
+        const tiendasMap = {};
+        const promises = data.map(async (producto) => {
+          const res2 = await fetch(`/api/admin/productos-tiendas?producto_id=${producto.id}`);
+          const tiendas = await res2.json();
+          tiendasMap[producto.id] = Array.isArray(tiendas) ? tiendas.map(t => t.tienda_id) : [];
+        });
+        await Promise.all(promises);
+        setProductosTiendasMap(tiendasMap);
       }
     } catch (e) {
       console.error('Error cargando datos');
@@ -614,8 +626,8 @@ export default function AdminPage() {
                         {seccion === 'productos' && <th className="text-left py-3 px-4">Categoria</th>}
                         {seccion === 'productos' && <th className="text-left py-3 px-4">Personal.</th>}
                         {seccion === 'toppings' && <th className="text-left py-3 px-4">Precio</th>}
-                        {(seccion === 'sabores' || seccion === 'toppings') && <th className="text-left py-3 px-4">Tiendas</th>}
-                        {(seccion === 'productos' || seccion === 'promociones' || seccion === 'cupones') && <th className="text-left py-3 px-4">Tienda</th>}
+                        {(seccion === 'sabores' || seccion === 'toppings' || seccion === 'productos') && <th className="text-left py-3 px-4">Tiendas</th>}
+                        {(seccion === 'promociones' || seccion === 'cupones') && <th className="text-left py-3 px-4">Tienda</th>}
                         {seccion === 'cupones' && <th className="text-left py-3 px-4">Codigo</th>}
                         {seccion === 'cupones' && <th className="text-left py-3 px-4">Valor</th>}
                         {seccion === 'promociones' && <th className="text-left py-3 px-4">Tipo</th>}
@@ -635,8 +647,10 @@ export default function AdminPage() {
                         .map((item) => {
                         const tiendaNombre = tiendas.find(t => t.id === item.tienda_id)?.nombre || 'Todas';
                         const categoriaNombre = categorias.find(c => c.id === item.categoria_id)?.nombre || item.categoria || '-';
-                        // Tiendas asignadas para sabores y toppings
-                        const tiendasIds = seccion === 'sabores' ? saboresTiendas[item.id] : (seccion === 'toppings' ? toppingsTiendas[item.id] : []);
+                        // Tiendas asignadas para sabores, toppings y productos
+                        const tiendasIds = seccion === 'sabores' ? saboresTiendas[item.id] :
+                          (seccion === 'toppings' ? toppingsTiendas[item.id] :
+                          (seccion === 'productos' ? productosTiendasMap[item.id] : []));
                         const tiendasNombres = (tiendasIds || []).map(tid => tiendas.find(t => t.id === tid)?.nombre).filter(Boolean);
                         return (
                         <tr key={item.id} className="border-b hover:bg-gray-50">
@@ -665,7 +679,7 @@ export default function AdminPage() {
                           {seccion === 'toppings' && (
                             <td className="py-3 px-4">+S/{item.precio || 0}</td>
                           )}
-                          {(seccion === 'sabores' || seccion === 'toppings') && (
+                          {(seccion === 'sabores' || seccion === 'toppings' || seccion === 'productos') && (
                             <td className="py-3 px-4">
                               {tiendasNombres.length > 0 ? (
                                 <div className="flex flex-wrap gap-1">
@@ -680,7 +694,7 @@ export default function AdminPage() {
                               )}
                             </td>
                           )}
-                          {(seccion === 'productos' || seccion === 'promociones' || seccion === 'cupones') && (
+                          {(seccion === 'promociones' || seccion === 'cupones') && (
                             <td className="py-3 px-4">
                               <span className={`px-2 py-1 rounded text-xs ${item.tienda_id ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-600'}`}>
                                 {tiendaNombre}

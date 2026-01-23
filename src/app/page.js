@@ -13,6 +13,7 @@ import { supabaseBrowser, signOut } from '@/lib/supabase-browser';
 
 export default function Home() {
   const [tiendaSeleccionada, setTiendaSeleccionada] = useState(null);
+  const [cargandoTienda, setCargandoTienda] = useState(true);
   const [cliente, setCliente] = useState(null);
   const [carrito, setCarrito] = useState([]);
   const [mostrarCheckout, setMostrarCheckout] = useState(false);
@@ -22,6 +23,27 @@ export default function Home() {
   const [promociones, setPromociones] = useState([]);
   const [promoAplicada, setPromoAplicada] = useState(null);
   const [descuentoPromo, setDescuentoPromo] = useState(0);
+
+  // Cargar tienda guardada en localStorage al iniciar
+  useEffect(() => {
+    const tiendaGuardada = localStorage.getItem('tiendaSeleccionada');
+    if (tiendaGuardada) {
+      try {
+        setTiendaSeleccionada(JSON.parse(tiendaGuardada));
+      } catch (e) {
+        localStorage.removeItem('tiendaSeleccionada');
+      }
+    }
+    setCargandoTienda(false);
+  }, []);
+
+  // Guardar tienda en localStorage cuando cambia
+  const seleccionarTienda = (tienda) => {
+    setTiendaSeleccionada(tienda);
+    if (tienda) {
+      localStorage.setItem('tiendaSeleccionada', JSON.stringify(tienda));
+    }
+  };
 
   useEffect(() => {
     const { data: { subscription } } = supabaseBrowser.auth.onAuthStateChange(
@@ -101,9 +123,21 @@ export default function Home() {
     setCliente(null);
   };
 
+  // Mostrar pantalla de carga mientras verifica localStorage
+  if (cargandoTienda) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-amber-50 to-orange-100">
+        <div className="text-center">
+          <div className="text-6xl animate-bounce mb-4">🍦</div>
+          <p className="text-[#3d2314] font-medium">Cargando...</p>
+        </div>
+      </div>
+    );
+  }
+
   // Si no hay tienda seleccionada, mostrar selección de tienda
   if (!tiendaSeleccionada) {
-    return <SeleccionTienda onSeleccionar={setTiendaSeleccionada} />;
+    return <SeleccionTienda onSeleccionar={seleccionarTienda} />;
   }
 
   const agregarAlCarrito = (producto) => {
@@ -154,6 +188,7 @@ export default function Home() {
     setCarrito([]);
     setPromoAplicada(null);
     setPromociones([]);
+    localStorage.removeItem('tiendaSeleccionada');
   };
 
   return (

@@ -77,23 +77,25 @@ export default function AdminPage() {
       const data = await res.json();
       setDatos(data);
 
-      // Cargar tiendas asignadas para sabores y toppings
+      // Cargar tiendas asignadas para sabores y toppings (en paralelo)
       if (seccion === 'sabores' && Array.isArray(data)) {
         const tiendasMap = {};
-        for (const sabor of data) {
+        const promises = data.map(async (sabor) => {
           const res2 = await fetch(`/api/admin/sabores-tiendas?sabor_id=${sabor.id}`);
           const tiendas = await res2.json();
           tiendasMap[sabor.id] = Array.isArray(tiendas) ? tiendas.map(t => t.tienda_id) : [];
-        }
+        });
+        await Promise.all(promises);
         setSaboresTiendas(tiendasMap);
       }
       if (seccion === 'toppings' && Array.isArray(data)) {
         const tiendasMap = {};
-        for (const topping of data) {
+        const promises = data.map(async (topping) => {
           const res2 = await fetch(`/api/admin/toppings-tiendas?topping_id=${topping.id}`);
           const tiendas = await res2.json();
           tiendasMap[topping.id] = Array.isArray(tiendas) ? tiendas.map(t => t.tienda_id) : [];
-        }
+        });
+        await Promise.all(promises);
         setToppingsTiendas(tiendasMap);
       }
     } catch (e) {

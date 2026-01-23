@@ -651,43 +651,44 @@ function ModalEdicion({ seccion, item, categorias, tiendas, onGuardar, onCerrar 
   const [subiendo, setSubiendo] = useState(false);
   const [tiendasSeleccionadas, setTiendasSeleccionadas] = useState([]);
   const [tiendasDestacadas, setTiendasDestacadas] = useState([]);
+  const [cargandoTiendas, setCargandoTiendas] = useState(false);
 
   // Cargar tiendas asignadas si estamos editando
   useEffect(() => {
-    if (item?.id) {
-      if (seccion === 'productos') {
-        fetch(`/api/admin/productos-tiendas?producto_id=${item.id}`)
-          .then(res => res.json())
-          .then(data => {
-            if (Array.isArray(data)) {
-              setTiendasSeleccionadas(data.map(pt => pt.tienda_id));
-              setTiendasDestacadas(data.filter(pt => pt.destacado).map(pt => pt.tienda_id));
-            }
-          })
-          .catch(() => {
-            setTiendasSeleccionadas([]);
-            setTiendasDestacadas([]);
-          });
-      } else if (seccion === 'sabores') {
-        fetch(`/api/admin/sabores-tiendas?sabor_id=${item.id}`)
-          .then(res => res.json())
-          .then(data => {
-            if (Array.isArray(data)) {
-              setTiendasSeleccionadas(data.map(st => st.tienda_id));
-            }
-          })
-          .catch(() => setTiendasSeleccionadas([]));
-      } else if (seccion === 'toppings') {
-        fetch(`/api/admin/toppings-tiendas?topping_id=${item.id}`)
-          .then(res => res.json())
-          .then(data => {
-            if (Array.isArray(data)) {
-              setTiendasSeleccionadas(data.map(tt => tt.tienda_id));
-            }
-          })
-          .catch(() => setTiendasSeleccionadas([]));
+    if (!item?.id) return;
+
+    const cargarTiendas = async () => {
+      setCargandoTiendas(true);
+      try {
+        if (seccion === 'productos') {
+          const res = await fetch(`/api/admin/productos-tiendas?producto_id=${item.id}`);
+          const data = await res.json();
+          if (Array.isArray(data)) {
+            setTiendasSeleccionadas(data.map(pt => pt.tienda_id));
+            setTiendasDestacadas(data.filter(pt => pt.destacado).map(pt => pt.tienda_id));
+          }
+        } else if (seccion === 'sabores') {
+          const res = await fetch(`/api/admin/sabores-tiendas?sabor_id=${item.id}`);
+          const data = await res.json();
+          if (Array.isArray(data)) {
+            setTiendasSeleccionadas(data.map(st => st.tienda_id));
+          }
+        } else if (seccion === 'toppings') {
+          const res = await fetch(`/api/admin/toppings-tiendas?topping_id=${item.id}`);
+          const data = await res.json();
+          if (Array.isArray(data)) {
+            setTiendasSeleccionadas(data.map(tt => tt.tienda_id));
+          }
+        }
+      } catch (e) {
+        console.error('Error cargando tiendas:', e);
+        setTiendasSeleccionadas([]);
+        setTiendasDestacadas([]);
       }
-    }
+      setCargandoTiendas(false);
+    };
+
+    cargarTiendas();
   }, [seccion, item?.id]);
 
   const toggleTienda = (tiendaId) => {
@@ -875,6 +876,11 @@ function ModalEdicion({ seccion, item, categorias, tiendas, onGuardar, onCerrar 
           </button>
         </div>
         <div className="p-4 max-h-[70vh] overflow-y-auto">
+          {cargandoTiendas && (
+            <div className="text-center py-4 text-gray-500">
+              Cargando datos...
+            </div>
+          )}
 
         <form onSubmit={handleSubmit}>
           {campos[seccion]?.map((campo) => (

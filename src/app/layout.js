@@ -1,4 +1,5 @@
 import './globals.css';
+import Script from 'next/script';
 
 export const metadata = {
   title: 'El Chalán - Heladería',
@@ -23,6 +24,11 @@ export default function RootLayout({ children }) {
       </head>
       <body className="bg-[#4a9b8c] min-h-screen">
         {children}
+        {/* Culqi Checkout v4 */}
+        <Script
+          src="https://js.culqi.com/checkout-js"
+          strategy="lazyOnload"
+        />
       </body>
     </html>
   );

@@ -15,10 +15,22 @@ export default function AuthCallback() {
         const hashParams = new URLSearchParams(window.location.hash.substring(1));
         const accessToken = hashParams.get('access_token');
         const refreshToken = hashParams.get('refresh_token');
+        const errorParam = hashParams.get('error');
+        const errorDescription = hashParams.get('error_description');
+
+        // Si hay error en el hash, mostrarlo
+        if (errorParam) {
+          console.error('OAuth error:', errorParam, errorDescription);
+          setMensaje('Error: ' + (errorDescription || errorParam));
+          setTimeout(() => router.push('/?error=' + encodeURIComponent(errorDescription || errorParam)), 2000);
+          return;
+        }
 
         if (accessToken) {
+          console.log('Token recibido, estableciendo sesión...');
+
           // Establecer la sesión manualmente con los tokens del hash
-          const { error } = await supabaseBrowser.auth.setSession({
+          const { data, error } = await supabaseBrowser.auth.setSession({
             access_token: accessToken,
             refresh_token: refreshToken || ''
           });
@@ -30,13 +42,22 @@ export default function AuthCallback() {
             return;
           }
 
+          console.log('Sesión establecida:', data.session?.user?.email);
+
+          // Esperar un momento para que la sesión se persista
           setMensaje('¡Bienvenido!');
-          setTimeout(() => router.push('/'), 1000);
+
+          // Usar window.location para asegurar una recarga completa
+          setTimeout(() => {
+            window.location.href = '/';
+          }, 500);
         } else {
-          // Si no hay tokens, verificar si ya hay sesión
+          // Si no hay tokens en el hash, verificar si ya hay sesión
           const { data: { session } } = await supabaseBrowser.auth.getSession();
+          console.log('Verificando sesión existente:', session?.user?.email);
+
           if (session) {
-            router.push('/');
+            window.location.href = '/';
           } else {
             // No hay sesión, redirigir al inicio
             router.push('/');

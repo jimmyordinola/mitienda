@@ -7,9 +7,46 @@ export default function Checkout({ items, cliente, tienda, descuentoPromo = 0, o
   const [procesando, setProcesando] = useState(false);
   const [metodoPago, setMetodoPago] = useState('tarjeta'); // tarjeta, yape
   const [culqiReady, setCulqiReady] = useState(false);
+  const [horarioRecojo, setHorarioRecojo] = useState('asap'); // asap o hora especifica
 
   // Verificar si Culqi esta configurado
   const culqiConfigurado = Boolean(process.env.NEXT_PUBLIC_CULQI_PUBLIC_KEY);
+
+  // Generar horarios disponibles
+  const generarHorarios = () => {
+    const horarios = [];
+    const ahora = new Date();
+    const horaActual = ahora.getHours();
+    const minActual = ahora.getMinutes();
+
+    // Horario de atencion: 10am - 10pm
+    const horaApertura = 10;
+    const horaCierre = 22;
+
+    // Empezar desde la siguiente media hora
+    let horaInicio = horaActual;
+    let minInicio = minActual < 30 ? 30 : 0;
+    if (minActual >= 30) horaInicio++;
+
+    // Si es antes de apertura, empezar desde apertura
+    if (horaInicio < horaApertura) {
+      horaInicio = horaApertura;
+      minInicio = 0;
+    }
+
+    // Generar slots cada 30 minutos
+    for (let h = horaInicio; h < horaCierre; h++) {
+      for (let m = (h === horaInicio ? minInicio : 0); m < 60; m += 30) {
+        if (h === horaCierre - 1 && m > 30) break;
+        const hora = `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}`;
+        horarios.push(hora);
+      }
+    }
+
+    return horarios.slice(0, 8); // Maximo 8 opciones
+  };
+
+  const horariosDisponibles = generarHorarios();
 
   // Cargar script de Culqi
   useEffect(() => {
@@ -111,7 +148,8 @@ export default function Checkout({ items, cliente, tienda, descuentoPromo = 0, o
           descuento: descuentoPromo,
           usar_puntos: usarPuntos,
           metodo_pago: metodoPago === 'yape' ? 'yape' : 'tarjeta',
-          referencia_pago: dataCulqi.charge_id
+          referencia_pago: dataCulqi.charge_id,
+          horario_recojo: horarioRecojo === 'asap' ? 'Lo antes posible' : horarioRecojo
         })
       });
 
@@ -119,7 +157,8 @@ export default function Checkout({ items, cliente, tienda, descuentoPromo = 0, o
         const resultado = await resVenta.json();
         onCompletado({
           ...resultado,
-          metodo_pago: metodoPago === 'yape' ? 'Yape' : 'Tarjeta'
+          metodo_pago: metodoPago === 'yape' ? 'Yape' : 'Tarjeta',
+          horario_recojo: horarioRecojo === 'asap' ? 'Lo antes posible (10-15 min)' : horarioRecojo
         });
       } else {
         const error = await resVenta.json();
@@ -321,6 +360,46 @@ export default function Checkout({ items, cliente, tienda, descuentoPromo = 0, o
               Pago online proximamente disponible
             </p>
           )}
+        </div>
+
+        {/* Horario de recojo */}
+        <div className="mb-4">
+          <h3 className="font-semibold text-[#3d2314] mb-3">Horario de recojo</h3>
+          <div className="grid grid-cols-3 gap-2">
+            {/* Lo antes posible */}
+            <button
+              onClick={() => setHorarioRecojo('asap')}
+              className={`p-2 rounded-xl border-2 transition-all ${
+                horarioRecojo === 'asap'
+                  ? 'border-[#4a9b8c] bg-[#4a9b8c]/10'
+                  : 'border-gray-200 hover:border-gray-300'
+              }`}
+            >
+              <div className="text-lg">⚡</div>
+              <p className="text-xs font-medium text-[#3d2314]">Lo antes posible</p>
+            </button>
+
+            {/* Horarios disponibles */}
+            {horariosDisponibles.slice(0, 5).map((hora) => (
+              <button
+                key={hora}
+                onClick={() => setHorarioRecojo(hora)}
+                className={`p-2 rounded-xl border-2 transition-all ${
+                  horarioRecojo === hora
+                    ? 'border-[#4a9b8c] bg-[#4a9b8c]/10'
+                    : 'border-gray-200 hover:border-gray-300'
+                }`}
+              >
+                <div className="text-lg">🕐</div>
+                <p className="text-xs font-medium text-[#3d2314]">{hora}</p>
+              </button>
+            ))}
+          </div>
+          <p className="text-xs text-gray-500 mt-2 text-center">
+            {horarioRecojo === 'asap'
+              ? 'Tu pedido estara listo en 10-15 minutos'
+              : `Recoge tu pedido a las ${horarioRecojo}`}
+          </p>
         </div>
 
         {/* Total */}

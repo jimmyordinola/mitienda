@@ -5,7 +5,7 @@ import { useState, useEffect } from 'react';
 export default function Checkout({ items, cliente, tienda, descuentoPromo = 0, onCompletado, onCancelar }) {
   const [usarPuntos, setUsarPuntos] = useState(0);
   const [procesando, setProcesando] = useState(false);
-  const [metodoPago, setMetodoPago] = useState('tienda'); // tienda, tarjeta, yape
+  const [metodoPago, setMetodoPago] = useState('tarjeta'); // tarjeta, yape
   const [culqiReady, setCulqiReady] = useState(false);
 
   // Verificar si Culqi esta configurado
@@ -201,11 +201,7 @@ export default function Checkout({ items, cliente, tienda, descuentoPromo = 0, o
 
   // Handler del boton de pago
   const handlePagar = () => {
-    if (metodoPago === 'tienda') {
-      procesarPagoTienda();
-    } else {
-      abrirCulqi();
-    }
+    abrirCulqi();
   };
 
   return (
@@ -280,20 +276,7 @@ export default function Checkout({ items, cliente, tienda, descuentoPromo = 0, o
         {/* Metodo de pago */}
         <div className="mb-4">
           <h3 className="font-semibold text-[#3d2314] mb-3">Metodo de pago</h3>
-          <div className="grid grid-cols-3 gap-2">
-            {/* Pago en tienda */}
-            <button
-              onClick={() => setMetodoPago('tienda')}
-              className={`p-3 rounded-xl border-2 transition-all ${
-                metodoPago === 'tienda'
-                  ? 'border-[#4a9b8c] bg-[#4a9b8c]/10'
-                  : 'border-gray-200 hover:border-gray-300'
-              }`}
-            >
-              <div className="text-2xl mb-1">🏪</div>
-              <p className="text-xs font-medium text-[#3d2314]">En tienda</p>
-            </button>
-
+          <div className="grid grid-cols-2 gap-3">
             {/* Tarjeta */}
             <button
               onClick={() => culqiConfigurado && setMetodoPago('tarjeta')}
@@ -330,7 +313,6 @@ export default function Checkout({ items, cliente, tienda, descuentoPromo = 0, o
 
           {/* Mensaje segun metodo */}
           <p className="text-xs text-gray-500 mt-2 text-center">
-            {metodoPago === 'tienda' && 'Paga cuando recojas tu pedido'}
             {metodoPago === 'tarjeta' && 'Visa, Mastercard, American Express'}
             {metodoPago === 'yape' && 'Paga con tu billetera Yape'}
           </p>
@@ -363,17 +345,16 @@ export default function Checkout({ items, cliente, tienda, descuentoPromo = 0, o
           </button>
           <button
             onClick={handlePagar}
-            disabled={procesando || (metodoPago !== 'tienda' && !culqiReady)}
+            disabled={procesando || !culqiReady || !culqiConfigurado}
             className="flex-1 py-3 bg-[#c53030] text-white rounded-xl font-bold hover:bg-[#9b2c2c] hover:scale-[1.02] transition-all disabled:opacity-50 flex items-center justify-center gap-2"
           >
             {procesando ? (
               'Procesando...'
             ) : (
               <>
-                {metodoPago === 'tienda' && 'Confirmar Pedido'}
                 {metodoPago === 'tarjeta' && (
                   <>
-                    <span>💳</span> Pagar
+                    <span>💳</span> Pagar con Tarjeta
                   </>
                 )}
                 {metodoPago === 'yape' && (
@@ -391,13 +372,11 @@ export default function Checkout({ items, cliente, tienda, descuentoPromo = 0, o
         </div>
 
         {/* Logos de seguridad */}
-        {metodoPago !== 'tienda' && (
-          <div className="mt-4 flex items-center justify-center gap-4 opacity-60">
-            <img src="https://culqi.com/wp-content/uploads/2021/03/visa.png" alt="Visa" className="h-6" />
-            <img src="https://culqi.com/wp-content/uploads/2021/03/mastercard.png" alt="Mastercard" className="h-6" />
-            <span className="text-xs text-gray-500">Pago seguro con Culqi</span>
-          </div>
-        )}
+        <div className="mt-4 flex items-center justify-center gap-4 opacity-60">
+          <img src="https://culqi.com/wp-content/uploads/2021/03/visa.png" alt="Visa" className="h-6" />
+          <img src="https://culqi.com/wp-content/uploads/2021/03/mastercard.png" alt="Mastercard" className="h-6" />
+          <span className="text-xs text-gray-500">Pago seguro con Culqi</span>
+        </div>
       </div>
     </div>
   );

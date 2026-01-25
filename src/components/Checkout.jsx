@@ -3,13 +3,15 @@
 import { useState, useEffect } from 'react';
 
 export default function Checkout({ items, cliente, tienda, descuentoPromo = 0, onCompletado, onCancelar }) {
-  const [usarPuntos, setUsarPuntos] = useState(0);
   const [procesando, setProcesando] = useState(false);
-  const [metodoPago, setMetodoPago] = useState('tarjeta'); // tarjeta, yape
+  const [metodoPago, setMetodoPago] = useState('tarjeta');
   const [culqiReady, setCulqiReady] = useState(false);
-  const [horarioRecojo, setHorarioRecojo] = useState('asap'); // asap o hora especifica
+  const [horarioRecojo, setHorarioRecojo] = useState('asap');
+  const [cuponCodigo, setCuponCodigo] = useState('');
+  const [cuponAplicado, setCuponAplicado] = useState(null);
+  const [cuponesDisponibles, setCuponesDisponibles] = useState([]);
+  const [mostrarCupones, setMostrarCupones] = useState(false);
 
-  // Verificar si Culqi esta configurado
   const culqiConfigurado = Boolean(process.env.NEXT_PUBLIC_CULQI_PUBLIC_KEY);
 
   // Generar horarios disponibles
@@ -18,23 +20,18 @@ export default function Checkout({ items, cliente, tienda, descuentoPromo = 0, o
     const ahora = new Date();
     const horaActual = ahora.getHours();
     const minActual = ahora.getMinutes();
-
-    // Horario de atencion: 10am - 10pm
     const horaApertura = 10;
     const horaCierre = 22;
 
-    // Empezar desde la siguiente media hora
     let horaInicio = horaActual;
     let minInicio = minActual < 30 ? 30 : 0;
     if (minActual >= 30) horaInicio++;
 
-    // Si es antes de apertura, empezar desde apertura
     if (horaInicio < horaApertura) {
       horaInicio = horaApertura;
       minInicio = 0;
     }
 
-    // Generar slots cada 30 minutos
     for (let h = horaInicio; h < horaCierre; h++) {
       for (let m = (h === horaInicio ? minInicio : 0); m < 60; m += 30) {
         if (h === horaCierre - 1 && m > 30) break;
@@ -42,38 +39,58 @@ export default function Checkout({ items, cliente, tienda, descuentoPromo = 0, o
         horarios.push(hora);
       }
     }
-
-    return horarios.slice(0, 8); // Maximo 8 opciones
+    return horarios.slice(0, 8);
   };
 
   const horariosDisponibles = generarHorarios();
 
-  // Cargar script de Culqi
+  // Cargar Culqi
   useEffect(() => {
     if (typeof window !== 'undefined' && !window.Culqi) {
       const script = document.createElement('script');
       script.src = 'https://checkout.culqi.com/js/v4';
       script.async = true;
-      script.onload = () => {
-        setCulqiReady(true);
-      };
+      script.onload = () => setCulqiReady(true);
       document.body.appendChild(script);
     } else if (window.Culqi) {
       setCulqiReady(true);
     }
   }, []);
 
-  // Si no hay cliente logueado, no mostrar checkout
-  if (!cliente) {
-    return null;
-  }
+  // Cargar cupones disponibles
+  useEffect(() => {
+    if (cliente?.id && tienda?.id) {
+      cargarCupones();
+    }
+  }, [cliente?.id, tienda?.id]);
+
+  const cargarCupones = async () => {
+    try {
+      const res = await fetch(`/api/fidelidad?cliente_id=${cliente.id}&tienda_id=${tienda.id}`);
+      const data = await res.json();
+      setCuponesDisponibles(data.cupones?.vigentes || []);
+    } catch (e) {
+      console.error('Error cargando cupones:', e);
+    }
+  };
+
+  if (!cliente) return null;
 
   const subtotal = items.reduce((sum, item) => sum + ((item.precioFinal || item.precio) * item.cantidad), 0);
-  const totalConPromo = subtotal - descuentoPromo;
-  const descuentoPuntos = usarPuntos;
-  const total = Math.max(0, totalConPromo - descuentoPuntos);
-  const puntosGanar = Math.floor(total / 10);
-  const maxPuntosUsar = Math.min(cliente.puntos, totalConPromo);
+  const descuentoCupon = cuponAplicado ? cuponAplicado.valor : 0;
+  const total = Math.max(0, subtotal - descuentoPromo - descuentoCupon);
+  const puntosGanar = Math.floor(total); // 1 punto por sol
+
+  const aplicarCupon = (cupon) => {
+    setCuponAplicado(cupon);
+    setCuponCodigo(cupon.codigo);
+    setMostrarCupones(false);
+  };
+
+  const quitarCupon = () => {
+    setCuponAplicado(null);
+    setCuponCodigo('');
+  };
 
   // Configurar Culqi
   const configurarCulqi = () => {
@@ -83,7 +100,7 @@ export default function Checkout({ items, cliente, tienda, descuentoPromo = 0, o
     window.Culqi.settings({
       title: 'El Chalan',
       currency: 'PEN',
-      amount: Math.round(total * 100), // En centavos
+      amount: Math.round(total * 100),
       order: `orden-${Date.now()}`
     });
 
@@ -112,7 +129,6 @@ export default function Checkout({ items, cliente, tienda, descuentoPromo = 0, o
   const procesarPagoCulqi = async (token) => {
     setProcesando(true);
     try {
-      // 1. Crear cargo en Culqi
       const resCulqi = await fetch('/api/pagos/culqi', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -136,7 +152,7 @@ export default function Checkout({ items, cliente, tienda, descuentoPromo = 0, o
         throw new Error(dataCulqi.error || 'Error procesando el pago');
       }
 
-      // 2. Registrar venta
+      // Registrar venta
       const resVenta = await fetch('/api/ventas', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -146,7 +162,7 @@ export default function Checkout({ items, cliente, tienda, descuentoPromo = 0, o
           items,
           total: subtotal,
           descuento: descuentoPromo,
-          usar_puntos: usarPuntos,
+          cupon_codigo: cuponAplicado?.codigo || null,
           metodo_pago: metodoPago === 'yape' ? 'yape' : 'tarjeta',
           referencia_pago: dataCulqi.charge_id,
           horario_recojo: horarioRecojo === 'asap' ? 'Lo antes posible' : horarioRecojo
@@ -170,75 +186,32 @@ export default function Checkout({ items, cliente, tienda, descuentoPromo = 0, o
     setProcesando(false);
   };
 
-  // Abrir Culqi Checkout
+  // Abrir Culqi
   const abrirCulqi = () => {
     if (!culqiReady || !window.Culqi) {
       alert('El sistema de pago no esta listo. Intenta de nuevo.');
       return;
     }
 
-    // Verificar que la llave de Culqi este configurada
     const culqiKey = process.env.NEXT_PUBLIC_CULQI_PUBLIC_KEY;
     if (!culqiKey) {
-      alert('El pago con tarjeta no esta disponible en este momento. Por favor selecciona pago en tienda.');
-      setMetodoPago('tienda');
+      alert('El pago con tarjeta no esta disponible en este momento.');
       return;
     }
 
     configurarCulqi();
 
-    // Handler global para respuesta de Culqi
     window.culqi = function() {
       if (window.Culqi.token) {
-        // Token creado exitosamente
         procesarPagoCulqi(window.Culqi.token.id);
       } else if (window.Culqi.error) {
-        // Error en el proceso
         alert(window.Culqi.error.user_message || 'Error procesando el pago');
       }
     };
 
-    // Abrir checkout de Culqi
     window.Culqi.open();
   };
 
-  // Procesar pago en tienda
-  const procesarPagoTienda = async () => {
-    setProcesando(true);
-
-    try {
-      const res = await fetch('/api/ventas', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          cliente_id: cliente.id,
-          tienda_id: tienda?.id,
-          items,
-          total: subtotal,
-          descuento: descuentoPromo,
-          usar_puntos: usarPuntos,
-          metodo_pago: 'efectivo'
-        })
-      });
-
-      if (res.ok) {
-        const resultado = await res.json();
-        onCompletado({
-          ...resultado,
-          metodo_pago: 'Pago en tienda'
-        });
-      } else {
-        const error = await res.json();
-        alert(error.error || 'Error al procesar el pedido');
-      }
-    } catch (e) {
-      alert('Error de conexion');
-    }
-
-    setProcesando(false);
-  };
-
-  // Handler del boton de pago
   const handlePagar = () => {
     abrirCulqi();
   };
@@ -260,13 +233,11 @@ export default function Checkout({ items, cliente, tienda, descuentoPromo = 0, o
                 <span className="font-medium">{item.cantidad}x {item.nombre}</span>
                 <span className="font-bold">S/{((item.precioFinal || item.precio) * item.cantidad).toFixed(2)}</span>
               </div>
-              {/* Mostrar sabores si existen */}
               {item.personalizacion?.sabores?.length > 0 && (
                 <p className="text-xs text-gray-600 mt-1">
                   <span className="font-medium">Sabores:</span> {item.personalizacion.sabores.map(s => s.nombre).join(', ')}
                 </p>
               )}
-              {/* Mostrar toppings si existen */}
               {item.personalizacion?.toppings?.length > 0 && (
                 <p className="text-xs text-gray-600">
                   <span className="font-medium">Toppings:</span> {item.personalizacion.toppings.map(t => t.nombre).join(', ')}
@@ -275,40 +246,74 @@ export default function Checkout({ items, cliente, tienda, descuentoPromo = 0, o
             </div>
           ))}
 
-          {/* Subtotal */}
           <div className="border-t border-[#3d2314]/20 mt-2 pt-2 flex justify-between text-sm text-[#3d2314]">
             <span>Subtotal:</span>
             <span>S/{subtotal.toFixed(2)}</span>
           </div>
 
-          {/* Descuento promocion */}
           {descuentoPromo > 0 && (
             <div className="flex justify-between text-sm text-green-600 font-medium">
               <span>Descuento promocion:</span>
               <span>-S/{descuentoPromo.toFixed(2)}</span>
             </div>
           )}
+
+          {cuponAplicado && (
+            <div className="flex justify-between text-sm text-green-600 font-medium">
+              <span>Cupon {cuponAplicado.codigo}:</span>
+              <span>-S/{cuponAplicado.valor.toFixed(2)}</span>
+            </div>
+          )}
         </div>
 
-        {/* Usar puntos */}
-        {cliente.puntos > 0 && (
-          <div className="bg-[#4a9b8c]/10 rounded-xl p-4 mb-4">
-            <h3 className="font-semibold text-[#3d2314] mb-2">
-              Usar puntos ({cliente.puntos} disponibles)
-            </h3>
-            <p className="text-xs text-[#4a9b8c] mb-2">1 punto = S/1 de descuento</p>
-            <input
-              type="range"
-              min="0"
-              max={maxPuntosUsar}
-              value={usarPuntos}
-              onChange={(e) => setUsarPuntos(parseInt(e.target.value))}
-              className="w-full accent-[#4a9b8c]"
-            />
-            <div className="flex justify-between text-sm mt-1">
-              <span className="text-[#3d2314]">Usar: {usarPuntos} puntos</span>
-              <span className="text-[#4a9b8c] font-bold">-S/{usarPuntos.toFixed(2)}</span>
+        {/* Cupones disponibles */}
+        {cuponesDisponibles.length > 0 && !cuponAplicado && (
+          <div className="mb-4">
+            <button
+              onClick={() => setMostrarCupones(!mostrarCupones)}
+              className="w-full py-3 bg-[#4a9b8c]/10 text-[#4a9b8c] rounded-xl font-medium flex items-center justify-center gap-2"
+            >
+              <span>🎫</span>
+              Tienes {cuponesDisponibles.length} cupon{cuponesDisponibles.length > 1 ? 'es' : ''} disponible{cuponesDisponibles.length > 1 ? 's' : ''}
+            </button>
+
+            {mostrarCupones && (
+              <div className="mt-2 space-y-2">
+                {cuponesDisponibles.map(cupon => (
+                  <button
+                    key={cupon.id}
+                    onClick={() => aplicarCupon(cupon)}
+                    className="w-full p-3 bg-gradient-to-r from-[#4a9b8c] to-[#3d8b7c] rounded-xl text-white text-left"
+                  >
+                    <div className="flex justify-between items-center">
+                      <div>
+                        <p className="font-bold">S/ {cupon.valor} de descuento</p>
+                        <p className="text-xs opacity-80">{cupon.codigo}</p>
+                      </div>
+                      <span className="text-2xl">+</span>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Cupon aplicado */}
+        {cuponAplicado && (
+          <div className="mb-4 p-3 bg-green-50 border border-green-200 rounded-xl flex justify-between items-center">
+            <div>
+              <p className="text-green-700 font-medium">Cupon aplicado</p>
+              <p className="text-sm text-green-600">{cuponAplicado.codigo} - S/{cuponAplicado.valor} de descuento</p>
             </div>
+            <button
+              onClick={quitarCupon}
+              className="text-red-500 hover:text-red-700"
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
           </div>
         )}
 
@@ -316,7 +321,6 @@ export default function Checkout({ items, cliente, tienda, descuentoPromo = 0, o
         <div className="mb-4">
           <h3 className="font-semibold text-[#3d2314] mb-3">Metodo de pago</h3>
           <div className="grid grid-cols-2 gap-3">
-            {/* Tarjeta */}
             <button
               onClick={() => culqiConfigurado && setMetodoPago('tarjeta')}
               disabled={!culqiConfigurado}
@@ -330,7 +334,6 @@ export default function Checkout({ items, cliente, tienda, descuentoPromo = 0, o
               <p className="text-xs font-medium text-[#3d2314]">Tarjeta</p>
             </button>
 
-            {/* Yape */}
             <button
               onClick={() => culqiConfigurado && setMetodoPago('yape')}
               disabled={!culqiConfigurado}
@@ -350,7 +353,6 @@ export default function Checkout({ items, cliente, tienda, descuentoPromo = 0, o
             </button>
           </div>
 
-          {/* Mensaje segun metodo */}
           <p className="text-xs text-gray-500 mt-2 text-center">
             {metodoPago === 'tarjeta' && 'Visa, Mastercard, American Express'}
             {metodoPago === 'yape' && 'Paga con tu billetera Yape'}
@@ -366,7 +368,6 @@ export default function Checkout({ items, cliente, tienda, descuentoPromo = 0, o
         <div className="mb-4">
           <h3 className="font-semibold text-[#3d2314] mb-3">Horario de recojo</h3>
           <div className="grid grid-cols-3 gap-2">
-            {/* Lo antes posible */}
             <button
               onClick={() => setHorarioRecojo('asap')}
               className={`p-2 rounded-xl border-2 transition-all ${
@@ -379,7 +380,6 @@ export default function Checkout({ items, cliente, tienda, descuentoPromo = 0, o
               <p className="text-xs font-medium text-[#3d2314]">Lo antes posible</p>
             </button>
 
-            {/* Horarios disponibles */}
             {horariosDisponibles.slice(0, 5).map((hora) => (
               <button
                 key={hora}

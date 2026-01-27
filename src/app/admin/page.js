@@ -654,6 +654,32 @@ export default function AdminPage() {
                             ⭐ +{venta.puntos_ganados} puntos ganados
                           </div>
                         )}
+
+                        {/* Comprobante electronico */}
+                        {venta.comprobante_pdf ? (
+                          <div className="mt-3 p-2 bg-green-50 rounded-lg flex items-center justify-between">
+                            <div className="text-sm">
+                              <span className="font-medium text-green-700">
+                                {venta.comprobante_tipo === 'factura' ? '📄 Factura' : '🧾 Boleta'}
+                              </span>
+                              <span className="text-green-600 ml-2">
+                                {venta.comprobante_serie}-{venta.comprobante_numero}
+                              </span>
+                            </div>
+                            <a
+                              href={venta.comprobante_pdf}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="px-3 py-1 bg-green-600 text-white text-sm rounded-lg hover:bg-green-700"
+                            >
+                              Ver PDF
+                            </a>
+                          </div>
+                        ) : (
+                          <div className="mt-3 p-2 bg-gray-50 rounded-lg text-sm text-gray-500">
+                            Sin comprobante electrónico
+                          </div>
+                        )}
                       </div>
                     ))}
                   </div>

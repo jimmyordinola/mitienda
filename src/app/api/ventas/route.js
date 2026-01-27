@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { generarComprobante } from '@/lib/nubefact';
 
 // Cliente admin para bypass de RLS
 const supabaseAdmin = createClient(
@@ -242,26 +243,17 @@ export async function POST(request) {
         email: email_comprobante || clienteData?.email || ''
       };
 
-      const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://elchalan.pe';
-      const resFactura = await fetch(`${baseUrl}/api/facturacion`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          tipo_comprobante,
-          cliente: clienteFacturacion,
-          items,
-          total: totalFinal,
-          descuento: descuento + descuentoCupon,
-          venta_id: venta.id,
-          tienda: tiendaData
-        })
+      comprobante = await generarComprobante({
+        tipo_comprobante,
+        cliente: clienteFacturacion,
+        items,
+        total: totalFinal,
+        descuento: descuento + descuentoCupon,
+        venta_id: venta.id,
+        tienda: tiendaData
       });
 
-      const dataFactura = await resFactura.json();
-
-      if (resFactura.ok && dataFactura.comprobante) {
-        comprobante = dataFactura.comprobante;
-
+      if (comprobante) {
         // Guardar info del comprobante en la venta
         await supabaseAdmin
           .from('ventas')

@@ -233,6 +233,11 @@ export async function POST(request) {
 
   // Generar comprobante electronico si Nubefact esta configurado
   let comprobante = null;
+  console.log('=== NUBEFACT DEBUG ===');
+  console.log('NUBEFACT_TOKEN existe:', !!process.env.NUBEFACT_TOKEN);
+  console.log('NUBEFACT_URL:', process.env.NUBEFACT_URL);
+  console.log('totalFinal:', totalFinal);
+
   if (process.env.NUBEFACT_TOKEN && totalFinal > 0) {
     try {
       const clienteFacturacion = {
@@ -243,6 +248,13 @@ export async function POST(request) {
         email: email_comprobante || clienteData?.email || ''
       };
 
+      console.log('Datos facturacion:', JSON.stringify({
+        tipo_comprobante,
+        cliente: clienteFacturacion,
+        venta_id: venta.id,
+        total: totalFinal
+      }));
+
       comprobante = await generarComprobante({
         tipo_comprobante,
         cliente: clienteFacturacion,
@@ -252,6 +264,8 @@ export async function POST(request) {
         venta_id: venta.id,
         tienda: tiendaData
       });
+
+      console.log('Resultado comprobante:', JSON.stringify(comprobante));
 
       if (comprobante) {
         // Guardar info del comprobante en la venta
@@ -265,12 +279,19 @@ export async function POST(request) {
             documento_cliente: documento_cliente
           })
           .eq('id', venta.id);
+        console.log('Comprobante guardado en BD');
+      } else {
+        console.log('generarComprobante retorno null');
       }
     } catch (e) {
-      console.error('Error generando comprobante:', e);
+      console.error('Error generando comprobante:', e.message);
+      console.error('Stack:', e.stack);
       // No fallar la venta si falla el comprobante
     }
+  } else {
+    console.log('Saltando facturacion - Token:', !!process.env.NUBEFACT_TOKEN, 'Total:', totalFinal);
   }
+  console.log('=== FIN NUBEFACT DEBUG ===');
 
   const response = {
     venta_id: venta.id,

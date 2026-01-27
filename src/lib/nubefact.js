@@ -110,6 +110,9 @@ export async function generarComprobante({
     };
 
     // Enviar a Nubefact
+    console.log('Enviando a Nubefact URL:', NUBEFACT_URL);
+    console.log('Documento a enviar:', JSON.stringify(documento, null, 2));
+
     const response = await fetch(NUBEFACT_URL, {
       method: 'POST',
       headers: {
@@ -120,6 +123,8 @@ export async function generarComprobante({
     });
 
     const resultado = await response.json();
+    console.log('Respuesta Nubefact status:', response.status);
+    console.log('Respuesta Nubefact body:', JSON.stringify(resultado));
 
     if (!response.ok) {
       console.error('Error Nubefact:', resultado);

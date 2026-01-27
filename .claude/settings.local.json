@@ -4,7 +4,10 @@
       "Bash(dir:*)",
       "Bash(findstr:*)",
       "Bash(npm run build:*)",
-      "Bash(git pull:*)"
+      "Bash(git pull:*)",
+      "Bash(npm install:*)",
+      "Bash(pdftotext:*)",
+      "Bash(git restore:*)"
     ]
   }
 }

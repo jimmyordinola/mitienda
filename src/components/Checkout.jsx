@@ -200,6 +200,8 @@ export default function Checkout({ items, cliente, tienda, descuentoPromo = 0, o
 
     window.culqi = function() {
       if (window.Culqi.token) {
+        // Cerrar el modal de Culqi
+        window.Culqi.close();
         procesarPagoCulqi(window.Culqi.token.id);
       } else if (window.Culqi.error) {
         alert(window.Culqi.error.user_message || 'Error procesando el pago');

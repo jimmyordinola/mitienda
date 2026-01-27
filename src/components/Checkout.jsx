@@ -16,6 +16,13 @@ export default function Checkout({ items, cliente, tienda, descuentoPromo = 0, o
   const [cuponesDisponibles, setCuponesDisponibles] = useState([]);
   const [mostrarCupones, setMostrarCupones] = useState(false);
 
+  // Facturacion
+  const [tipoComprobante, setTipoComprobante] = useState(2); // 2=Boleta, 1=Factura
+  const [documentoCliente, setDocumentoCliente] = useState(cliente?.dni || '');
+  const [razonSocial, setRazonSocial] = useState('');
+  const [direccionFiscal, setDireccionFiscal] = useState('');
+  const [emailComprobante, setEmailComprobante] = useState(cliente?.email || '');
+
   const culqiConfigurado = Boolean(process.env.NEXT_PUBLIC_CULQI_PUBLIC_KEY);
 
   // Obtener horarios de la tienda (configurables)
@@ -205,7 +212,13 @@ export default function Checkout({ items, cliente, tienda, descuentoPromo = 0, o
           cupon_codigo: cuponAplicado?.codigo || null,
           metodo_pago: metodoPago === 'yape' ? 'yape' : 'tarjeta',
           referencia_pago: dataCulqi.charge_id,
-          horario_recojo: `${fechaSeleccionada?.label} ${fechaSeleccionada?.dia} ${fechaSeleccionada?.mes} - ${horarioRecojo}`
+          horario_recojo: `${fechaSeleccionada?.label} ${fechaSeleccionada?.dia} ${fechaSeleccionada?.mes} - ${horarioRecojo}`,
+          // Datos de facturacion
+          tipo_comprobante: tipoComprobante,
+          documento_cliente: documentoCliente || null,
+          razon_social: tipoComprobante === 1 ? razonSocial : null,
+          direccion_fiscal: tipoComprobante === 1 ? direccionFiscal : null,
+          email_comprobante: emailComprobante || null
         })
       });
 
@@ -258,6 +271,21 @@ export default function Checkout({ items, cliente, tienda, descuentoPromo = 0, o
     if (!horarioRecojo) {
       alert('Selecciona un horario de recojo');
       return;
+    }
+    // Validar datos de factura
+    if (tipoComprobante === 1) {
+      if (!documentoCliente || documentoCliente.length !== 11) {
+        alert('Ingresa un RUC valido (11 digitos)');
+        return;
+      }
+      if (!razonSocial.trim()) {
+        alert('Ingresa la razon social');
+        return;
+      }
+      if (!direccionFiscal.trim()) {
+        alert('Ingresa la direccion fiscal');
+        return;
+      }
     }
     abrirCulqi();
   };
@@ -362,6 +390,79 @@ export default function Checkout({ items, cliente, tienda, descuentoPromo = 0, o
             </button>
           </div>
         )}
+
+        {/* Tipo de comprobante */}
+        <div className="mb-4">
+          <h3 className="font-semibold text-[#3d2314] mb-3">Comprobante</h3>
+          <div className="grid grid-cols-2 gap-2 mb-3">
+            <button
+              onClick={() => setTipoComprobante(2)}
+              className={`p-3 rounded-xl border-2 transition-all ${
+                tipoComprobante === 2
+                  ? 'border-[#4a9b8c] bg-[#4a9b8c]/10'
+                  : 'border-gray-200 hover:border-gray-300'
+              }`}
+            >
+              <p className="text-sm font-medium text-[#3d2314]">Boleta</p>
+              <p className="text-xs text-gray-500">DNI</p>
+            </button>
+            <button
+              onClick={() => setTipoComprobante(1)}
+              className={`p-3 rounded-xl border-2 transition-all ${
+                tipoComprobante === 1
+                  ? 'border-[#4a9b8c] bg-[#4a9b8c]/10'
+                  : 'border-gray-200 hover:border-gray-300'
+              }`}
+            >
+              <p className="text-sm font-medium text-[#3d2314]">Factura</p>
+              <p className="text-xs text-gray-500">RUC</p>
+            </button>
+          </div>
+
+          {tipoComprobante === 2 ? (
+            <input
+              type="text"
+              placeholder="DNI (opcional)"
+              value={documentoCliente}
+              onChange={(e) => setDocumentoCliente(e.target.value.replace(/\D/g, '').slice(0, 8))}
+              className="w-full px-4 py-2 border-2 rounded-xl focus:border-[#4a9b8c] focus:outline-none text-sm"
+              maxLength={8}
+            />
+          ) : (
+            <div className="space-y-2">
+              <input
+                type="text"
+                placeholder="RUC *"
+                value={documentoCliente}
+                onChange={(e) => setDocumentoCliente(e.target.value.replace(/\D/g, '').slice(0, 11))}
+                className="w-full px-4 py-2 border-2 rounded-xl focus:border-[#4a9b8c] focus:outline-none text-sm"
+                maxLength={11}
+              />
+              <input
+                type="text"
+                placeholder="Razon Social *"
+                value={razonSocial}
+                onChange={(e) => setRazonSocial(e.target.value)}
+                className="w-full px-4 py-2 border-2 rounded-xl focus:border-[#4a9b8c] focus:outline-none text-sm"
+              />
+              <input
+                type="text"
+                placeholder="Direccion Fiscal *"
+                value={direccionFiscal}
+                onChange={(e) => setDireccionFiscal(e.target.value)}
+                className="w-full px-4 py-2 border-2 rounded-xl focus:border-[#4a9b8c] focus:outline-none text-sm"
+              />
+            </div>
+          )}
+
+          <input
+            type="email"
+            placeholder="Email para recibir comprobante"
+            value={emailComprobante}
+            onChange={(e) => setEmailComprobante(e.target.value)}
+            className="w-full mt-2 px-4 py-2 border-2 rounded-xl focus:border-[#4a9b8c] focus:outline-none text-sm"
+          />
+        </div>
 
         {/* Metodo de pago */}
         <div className="mb-4">

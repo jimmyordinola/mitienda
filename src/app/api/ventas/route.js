@@ -28,7 +28,13 @@ export async function POST(request) {
     cupon_codigo = null,
     metodo_pago = 'efectivo',
     referencia_pago = null,
-    horario_recojo = null
+    horario_recojo = null,
+    // Datos de facturacion
+    tipo_comprobante = 2, // 2=Boleta, 1=Factura
+    documento_cliente = null, // DNI o RUC
+    razon_social = null, // Para facturas
+    direccion_fiscal = null, // Para facturas
+    email_comprobante = null
   } = await request.json();
 
   // Requerir cliente logueado
@@ -210,13 +216,78 @@ export async function POST(request) {
     }]);
   }
 
+  // Obtener datos del cliente para facturacion
+  const { data: clienteData } = await supabaseAdmin
+    .from('clientes')
+    .select('*')
+    .eq('id', cliente_id)
+    .single();
+
+  // Obtener datos de la tienda
+  const { data: tiendaData } = await supabaseAdmin
+    .from('tiendas')
+    .select('*')
+    .eq('id', tienda_id)
+    .single();
+
+  // Generar comprobante electronico si Nubefact esta configurado
+  let comprobante = null;
+  if (process.env.NUBEFACT_TOKEN && totalFinal > 0) {
+    try {
+      const clienteFacturacion = {
+        nombre: razon_social || clienteData?.nombre || 'Cliente',
+        dni: tipo_comprobante === 2 ? (documento_cliente || clienteData?.dni || '00000000') : null,
+        ruc: tipo_comprobante === 1 ? documento_cliente : null,
+        direccion: direccion_fiscal || clienteData?.direccion || '-',
+        email: email_comprobante || clienteData?.email || ''
+      };
+
+      const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://elchalan.pe';
+      const resFactura = await fetch(`${baseUrl}/api/facturacion`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          tipo_comprobante,
+          cliente: clienteFacturacion,
+          items,
+          total: totalFinal,
+          descuento: descuento + descuentoCupon,
+          venta_id: venta.id,
+          tienda: tiendaData
+        })
+      });
+
+      const dataFactura = await resFactura.json();
+
+      if (resFactura.ok && dataFactura.comprobante) {
+        comprobante = dataFactura.comprobante;
+
+        // Guardar info del comprobante en la venta
+        await supabaseAdmin
+          .from('ventas')
+          .update({
+            comprobante_tipo: tipo_comprobante === 2 ? 'boleta' : 'factura',
+            comprobante_serie: comprobante.serie,
+            comprobante_numero: comprobante.numero,
+            comprobante_pdf: comprobante.enlace_pdf,
+            documento_cliente: documento_cliente
+          })
+          .eq('id', venta.id);
+      }
+    } catch (e) {
+      console.error('Error generando comprobante:', e);
+      // No fallar la venta si falla el comprobante
+    }
+  }
+
   const response = {
     venta_id: venta.id,
     total: totalFinal,
     descuento: descuento + descuentoCupon,
     puntos_ganados,
     puntos_actuales: puntosActuales,
-    mensaje: `+${puntos_ganados} puntos acumulados`
+    mensaje: `+${puntos_ganados} puntos acumulados`,
+    comprobante
   };
 
   if (cuponGenerado) {

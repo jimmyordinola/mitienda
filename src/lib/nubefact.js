@@ -117,7 +117,7 @@ export async function generarComprobante({
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${NUBEFACT_TOKEN}`
+        'Authorization': `Token token="${NUBEFACT_TOKEN}"`
       },
       body: JSON.stringify(documento)
     });

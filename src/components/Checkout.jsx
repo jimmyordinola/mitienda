@@ -100,8 +100,7 @@ export default function Checkout({ items, cliente, tienda, descuentoPromo = 0, o
     window.Culqi.settings({
       title: 'El Chalan',
       currency: 'PEN',
-      amount: Math.round(total * 100),
-      order: `orden-${Date.now()}`
+      amount: Math.round(total * 100)
     });
 
     window.Culqi.options({
@@ -112,15 +111,13 @@ export default function Checkout({ items, cliente, tienda, descuentoPromo = 0, o
         yape: metodoPago === 'yape',
         bancaMovil: false,
         agente: false,
-        billetera: metodoPago === 'yape',
+        billetera: false,
         cuotealo: false
       },
       style: {
-        logo: '/images/logo.png',
         bannerColor: '#3d2314',
         buttonBackground: '#c53030',
-        buttonText: 'Pagar S/' + total.toFixed(2),
-        buttonTextColor: '#ffffff'
+        menuColor: '#3d2314'
       }
     });
   };

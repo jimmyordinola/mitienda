@@ -55,7 +55,10 @@ export async function generarComprobante({
       numeroDocumento = cliente.ruc || cliente.dni;
     }
 
-    const serie = tipo_comprobante === 2 ? 'B001' : 'F001';
+    // Usar series configuradas en la tienda, o valores por defecto
+    const serie = tipo_comprobante === 2
+      ? (tienda?.serie_boleta || 'BBB1')
+      : (tienda?.serie_factura || 'FFF1');
 
     // Preparar documento para Nubefact
     const documento = {

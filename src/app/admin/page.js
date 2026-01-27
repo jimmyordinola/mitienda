@@ -1082,6 +1082,8 @@ function FormularioEdicion({ seccion, item, categorias, tiendas, productos = [],
       { name: 'hora_apertura', label: 'Hora Apertura (para pedidos)', type: 'time' },
       { name: 'hora_cierre', label: 'Hora Cierre (para pedidos)', type: 'time' },
       { name: 'intervalo_minutos', label: 'Intervalo horarios (minutos)', type: 'number' },
+      { name: 'serie_boleta', label: 'Serie Boleta (Nubefact)', type: 'text', placeholder: 'Ej: BBB1' },
+      { name: 'serie_factura', label: 'Serie Factura (Nubefact)', type: 'text', placeholder: 'Ej: FFF1' },
       { name: 'disponible', label: 'Disponible', type: 'checkbox' },
     ],
   };

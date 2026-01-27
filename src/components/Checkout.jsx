@@ -516,10 +516,18 @@ export default function Checkout({ items, cliente, tienda, descuentoPromo = 0, o
         </div>
 
         {/* Logos de seguridad */}
-        <div className="mt-4 flex items-center justify-center gap-4 opacity-60">
-          <img src="https://culqi.com/wp-content/uploads/2021/03/visa.png" alt="Visa" className="h-6" />
-          <img src="https://culqi.com/wp-content/uploads/2021/03/mastercard.png" alt="Mastercard" className="h-6" />
-          <span className="text-xs text-gray-500">Pago seguro con Culqi</span>
+        <div className="mt-4 flex items-center justify-center gap-3 opacity-70">
+          <svg viewBox="0 0 48 32" className="h-6" fill="none">
+            <rect width="48" height="32" rx="4" fill="#1A1F71"/>
+            <text x="24" y="20" textAnchor="middle" fill="white" fontSize="12" fontWeight="bold" fontStyle="italic">VISA</text>
+          </svg>
+          <svg viewBox="0 0 48 32" className="h-6" fill="none">
+            <rect width="48" height="32" rx="4" fill="#f5f5f5"/>
+            <circle cx="18" cy="16" r="10" fill="#EB001B"/>
+            <circle cx="30" cy="16" r="10" fill="#F79E1B"/>
+            <path d="M24 8.5a10 10 0 000 15" fill="#FF5F00"/>
+          </svg>
+          <span className="text-xs text-gray-500">Pago seguro</span>
         </div>
       </div>
     </div>

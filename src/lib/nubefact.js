@@ -86,7 +86,7 @@ export async function generarComprobante({
       total_gratuita: 0,
       total_otros_cargos: 0,
       total: parseFloat(total.toFixed(2)),
-      percepcion_tipo: 0,
+      percepcion_tipo: '',
       percepcion_base_imponible: 0,
       total_percepcion: 0,
       total_incluido_percepcion: 0,

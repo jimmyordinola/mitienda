@@ -55,7 +55,7 @@ export async function generarComprobante({
       numeroDocumento = cliente.ruc || cliente.dni;
     }
 
-    // Usar series configuradas en la tienda, o valores por defecto
+    // Series configurables por tienda (BBB1/FFF1 son las de prueba)
     const serie = tipo_comprobante === 2
       ? (tienda?.serie_boleta || 'BBB1')
       : (tienda?.serie_factura || 'FFF1');

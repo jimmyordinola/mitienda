@@ -7,6 +7,7 @@ export default function Checkout({ items, cliente, tienda, descuentoPromo = 0, o
   const [metodoPago, setMetodoPago] = useState('tarjeta');
   const [culqiReady, setCulqiReady] = useState(false);
   const [horarioRecojo, setHorarioRecojo] = useState('asap');
+  const [fechaRecojo, setFechaRecojo] = useState('hoy');
   const [cuponCodigo, setCuponCodigo] = useState('');
   const [cuponAplicado, setCuponAplicado] = useState(null);
   const [cuponesDisponibles, setCuponesDisponibles] = useState([]);
@@ -14,18 +15,45 @@ export default function Checkout({ items, cliente, tienda, descuentoPromo = 0, o
 
   const culqiConfigurado = Boolean(process.env.NEXT_PUBLIC_CULQI_PUBLIC_KEY);
 
-  // Generar horarios disponibles
+  // Obtener horarios de la tienda (configurables)
+  const horaApertura = tienda?.hora_apertura ? parseInt(tienda.hora_apertura.split(':')[0]) : 10;
+  const horaCierre = tienda?.hora_cierre ? parseInt(tienda.hora_cierre.split(':')[0]) : 22;
+  const intervalo = tienda?.intervalo_minutos || 30;
+
+  // Generar fechas disponibles
+  const generarFechas = () => {
+    const hoy = new Date();
+    const manana = new Date();
+    manana.setDate(manana.getDate() + 1);
+
+    const formatear = (fecha) => {
+      return fecha.toLocaleDateString('es-PE', { weekday: 'short', day: 'numeric', month: 'short' });
+    };
+
+    return [
+      { value: 'hoy', label: 'Hoy', sublabel: formatear(hoy) },
+      { value: 'manana', label: 'Mañana', sublabel: formatear(manana) }
+    ];
+  };
+
+  const fechasDisponibles = generarFechas();
+
+  // Generar horarios disponibles segun la tienda
   const generarHorarios = () => {
     const horarios = [];
     const ahora = new Date();
     const horaActual = ahora.getHours();
     const minActual = ahora.getMinutes();
-    const horaApertura = 10;
-    const horaCierre = 22;
+    const esHoy = fechaRecojo === 'hoy';
 
-    let horaInicio = horaActual;
-    let minInicio = minActual < 30 ? 30 : 0;
-    if (minActual >= 30) horaInicio++;
+    let horaInicio = esHoy ? horaActual : horaApertura;
+    let minInicio = esHoy ? (minActual < 30 ? 30 : 0) : 0;
+    if (esHoy && minActual >= 30) horaInicio++;
+
+    // Si es hoy y ya paso la hora de cierre
+    if (esHoy && horaActual >= horaCierre) {
+      return [];
+    }
 
     if (horaInicio < horaApertura) {
       horaInicio = horaApertura;
@@ -33,13 +61,13 @@ export default function Checkout({ items, cliente, tienda, descuentoPromo = 0, o
     }
 
     for (let h = horaInicio; h < horaCierre; h++) {
-      for (let m = (h === horaInicio ? minInicio : 0); m < 60; m += 30) {
+      for (let m = (h === horaInicio ? minInicio : 0); m < 60; m += intervalo) {
         if (h === horaCierre - 1 && m > 30) break;
         const hora = `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}`;
         horarios.push(hora);
       }
     }
-    return horarios.slice(0, 8);
+    return horarios.slice(0, 6);
   };
 
   const horariosDisponibles = generarHorarios();
@@ -162,7 +190,9 @@ export default function Checkout({ items, cliente, tienda, descuentoPromo = 0, o
           cupon_codigo: cuponAplicado?.codigo || null,
           metodo_pago: metodoPago === 'yape' ? 'yape' : 'tarjeta',
           referencia_pago: dataCulqi.charge_id,
-          horario_recojo: horarioRecojo === 'asap' ? 'Lo antes posible' : horarioRecojo
+          horario_recojo: horarioRecojo === 'asap'
+            ? 'Hoy - Lo antes posible'
+            : `${fechaRecojo === 'hoy' ? 'Hoy' : 'Mañana'} - ${horarioRecojo}`
         })
       });
 
@@ -171,7 +201,9 @@ export default function Checkout({ items, cliente, tienda, descuentoPromo = 0, o
         onCompletado({
           ...resultado,
           metodo_pago: metodoPago === 'yape' ? 'Yape' : 'Tarjeta',
-          horario_recojo: horarioRecojo === 'asap' ? 'Lo antes posible (10-15 min)' : horarioRecojo
+          horario_recojo: horarioRecojo === 'asap'
+            ? 'Hoy - Lo antes posible (10-15 min)'
+            : `${fechaRecojo === 'hoy' ? 'Hoy' : 'Mañana'} a las ${horarioRecojo}`
         });
       } else {
         const error = await resVenta.json();
@@ -363,23 +395,46 @@ export default function Checkout({ items, cliente, tienda, descuentoPromo = 0, o
           )}
         </div>
 
-        {/* Horario de recojo */}
+        {/* Fecha y Horario de recojo */}
         <div className="mb-4">
+          <h3 className="font-semibold text-[#3d2314] mb-3">Fecha de recojo</h3>
+          <div className="grid grid-cols-2 gap-2 mb-3">
+            {fechasDisponibles.map((fecha) => (
+              <button
+                key={fecha.value}
+                onClick={() => {
+                  setFechaRecojo(fecha.value);
+                  setHorarioRecojo('asap');
+                }}
+                className={`p-3 rounded-xl border-2 transition-all ${
+                  fechaRecojo === fecha.value
+                    ? 'border-[#4a9b8c] bg-[#4a9b8c]/10'
+                    : 'border-gray-200 hover:border-gray-300'
+                }`}
+              >
+                <p className="text-sm font-bold text-[#3d2314]">{fecha.label}</p>
+                <p className="text-xs text-gray-500">{fecha.sublabel}</p>
+              </button>
+            ))}
+          </div>
+
           <h3 className="font-semibold text-[#3d2314] mb-3">Horario de recojo</h3>
           <div className="grid grid-cols-3 gap-2">
-            <button
-              onClick={() => setHorarioRecojo('asap')}
-              className={`p-2 rounded-xl border-2 transition-all ${
-                horarioRecojo === 'asap'
-                  ? 'border-[#4a9b8c] bg-[#4a9b8c]/10'
-                  : 'border-gray-200 hover:border-gray-300'
-              }`}
-            >
-              <div className="text-lg">⚡</div>
-              <p className="text-xs font-medium text-[#3d2314]">Lo antes posible</p>
-            </button>
+            {fechaRecojo === 'hoy' && (
+              <button
+                onClick={() => setHorarioRecojo('asap')}
+                className={`p-2 rounded-xl border-2 transition-all ${
+                  horarioRecojo === 'asap'
+                    ? 'border-[#4a9b8c] bg-[#4a9b8c]/10'
+                    : 'border-gray-200 hover:border-gray-300'
+                }`}
+              >
+                <div className="text-lg">⚡</div>
+                <p className="text-xs font-medium text-[#3d2314]">Lo antes posible</p>
+              </button>
+            )}
 
-            {horariosDisponibles.slice(0, 5).map((hora) => (
+            {horariosDisponibles.map((hora) => (
               <button
                 key={hora}
                 onClick={() => setHorarioRecojo(hora)}
@@ -394,10 +449,20 @@ export default function Checkout({ items, cliente, tienda, descuentoPromo = 0, o
               </button>
             ))}
           </div>
+
+          {horariosDisponibles.length === 0 && fechaRecojo === 'hoy' && (
+            <p className="text-xs text-orange-500 mt-2 text-center">
+              No hay mas horarios disponibles hoy. Selecciona mañana.
+            </p>
+          )}
+
           <p className="text-xs text-gray-500 mt-2 text-center">
             {horarioRecojo === 'asap'
               ? 'Tu pedido estara listo en 10-15 minutos'
-              : `Recoge tu pedido a las ${horarioRecojo}`}
+              : `Recoge ${fechaRecojo === 'hoy' ? 'hoy' : 'mañana'} a las ${horarioRecojo}`}
+          </p>
+          <p className="text-xs text-gray-400 text-center">
+            Horario tienda: {horaApertura}:00 - {horaCierre}:00
           </p>
         </div>
 

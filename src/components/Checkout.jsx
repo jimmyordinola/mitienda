@@ -22,6 +22,8 @@ export default function Checkout({ items, cliente, tienda, descuentoPromo = 0, o
   const [razonSocial, setRazonSocial] = useState('');
   const [direccionFiscal, setDireccionFiscal] = useState('');
   const [emailComprobante, setEmailComprobante] = useState(cliente?.email || '');
+  const [consultandoDoc, setConsultandoDoc] = useState(false);
+  const [nombreConsultado, setNombreConsultado] = useState('');
 
   const culqiConfigurado = Boolean(process.env.NEXT_PUBLIC_CULQI_PUBLIC_KEY);
 
@@ -113,6 +115,49 @@ export default function Checkout({ items, cliente, tienda, descuentoPromo = 0, o
       cargarCupones();
     }
   }, [cliente?.id, tienda?.id]);
+
+  // Consultar DNI/RUC automaticamente
+  useEffect(() => {
+    const consultarDocumento = async () => {
+      const longitudRequerida = tipoComprobante === 2 ? 8 : 11;
+      const tipo = tipoComprobante === 2 ? 'dni' : 'ruc';
+
+      if (documentoCliente.length !== longitudRequerida) {
+        setNombreConsultado('');
+        return;
+      }
+
+      setConsultandoDoc(true);
+      try {
+        const res = await fetch(`/api/consulta-documento?tipo=${tipo}&numero=${documentoCliente}`);
+        const data = await res.json();
+
+        if (data.success) {
+          if (tipo === 'dni') {
+            setNombreConsultado(data.nombre);
+          } else {
+            setNombreConsultado(data.razonSocial);
+            // Auto-rellenar campos de factura
+            if (data.razonSocial && !razonSocial) {
+              setRazonSocial(data.razonSocial);
+            }
+            if (data.direccion && !direccionFiscal) {
+              setDireccionFiscal(data.direccion);
+            }
+          }
+        } else {
+          setNombreConsultado('');
+        }
+      } catch (e) {
+        console.error('Error consultando documento:', e);
+        setNombreConsultado('');
+      }
+      setConsultandoDoc(false);
+    };
+
+    const timeoutId = setTimeout(consultarDocumento, 300);
+    return () => clearTimeout(timeoutId);
+  }, [documentoCliente, tipoComprobante]);
 
   const cargarCupones = async () => {
     try {
@@ -420,24 +465,48 @@ export default function Checkout({ items, cliente, tienda, descuentoPromo = 0, o
           </div>
 
           {tipoComprobante === 2 ? (
-            <input
-              type="text"
-              placeholder="DNI (opcional)"
-              value={documentoCliente}
-              onChange={(e) => setDocumentoCliente(e.target.value.replace(/\D/g, '').slice(0, 8))}
-              className="w-full px-4 py-2 border-2 rounded-xl focus:border-[#4a9b8c] focus:outline-none text-sm"
-              maxLength={8}
-            />
+            <div className="space-y-1">
+              <div className="relative">
+                <input
+                  type="text"
+                  placeholder="DNI (opcional)"
+                  value={documentoCliente}
+                  onChange={(e) => setDocumentoCliente(e.target.value.replace(/\D/g, '').slice(0, 8))}
+                  className="w-full px-4 py-2 border-2 rounded-xl focus:border-[#4a9b8c] focus:outline-none text-sm"
+                  maxLength={8}
+                />
+                {consultandoDoc && documentoCliente.length === 8 && (
+                  <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                    <div className="w-4 h-4 border-2 border-[#4a9b8c] border-t-transparent rounded-full animate-spin"></div>
+                  </div>
+                )}
+              </div>
+              {nombreConsultado && documentoCliente.length === 8 && (
+                <p className="text-xs text-[#4a9b8c] px-2 font-medium">{nombreConsultado}</p>
+              )}
+            </div>
           ) : (
             <div className="space-y-2">
-              <input
-                type="text"
-                placeholder="RUC *"
-                value={documentoCliente}
-                onChange={(e) => setDocumentoCliente(e.target.value.replace(/\D/g, '').slice(0, 11))}
-                className="w-full px-4 py-2 border-2 rounded-xl focus:border-[#4a9b8c] focus:outline-none text-sm"
-                maxLength={11}
-              />
+              <div className="space-y-1">
+                <div className="relative">
+                  <input
+                    type="text"
+                    placeholder="RUC *"
+                    value={documentoCliente}
+                    onChange={(e) => setDocumentoCliente(e.target.value.replace(/\D/g, '').slice(0, 11))}
+                    className="w-full px-4 py-2 border-2 rounded-xl focus:border-[#4a9b8c] focus:outline-none text-sm"
+                    maxLength={11}
+                  />
+                  {consultandoDoc && documentoCliente.length === 11 && (
+                    <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                      <div className="w-4 h-4 border-2 border-[#4a9b8c] border-t-transparent rounded-full animate-spin"></div>
+                    </div>
+                  )}
+                </div>
+                {nombreConsultado && documentoCliente.length === 11 && (
+                  <p className="text-xs text-[#4a9b8c] px-2 font-medium">{nombreConsultado}</p>
+                )}
+              </div>
               <input
                 type="text"
                 placeholder="Razon Social *"

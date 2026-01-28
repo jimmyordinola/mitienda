@@ -38,13 +38,13 @@ export async function GET(request) {
   }
 
   try {
+    // Usar token en query string (más confiable según documentación)
     const endpoint = tipo === 'dni'
-      ? `${API_BASE_URL}/reniec/dni?numero=${numero}`
-      : `${API_BASE_URL}/sunat/ruc?numero=${numero}`;
+      ? `${API_BASE_URL}/reniec/dni?numero=${numero}&token=${API_TOKEN}`
+      : `${API_BASE_URL}/sunat/ruc?numero=${numero}&token=${API_TOKEN}`;
 
     const response = await fetch(endpoint, {
       headers: {
-        'Authorization': `Bearer ${API_TOKEN}`,
         'Accept': 'application/json'
       }
     });

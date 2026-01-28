@@ -25,6 +25,12 @@ export default function AdminPage() {
   const [productosTiendasMap, setProductosTiendasMap] = useState({});
   const [categoriasTiendasMap, setCategoriasTiendasMap] = useState({});
 
+  // Fidelización
+  const [configFidelidad, setConfigFidelidad] = useState({});
+  const [recompensas, setRecompensas] = useState([]);
+  const [canjes, setCanjes] = useState([]);
+  const [subTabFidelidad, setSubTabFidelidad] = useState('config');
+
   // Login
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -52,6 +58,14 @@ export default function AdminPage() {
       }
     }
   }, [seccion, productoSeleccionado]);
+
+  useEffect(() => {
+    if (admin && seccion === 'fidelizacion') {
+      cargarConfigFidelidad();
+      cargarRecompensas();
+      cargarCanjes();
+    }
+  }, [admin, seccion]);
 
   const handleLogin = async (e) => {
     e.preventDefault();
@@ -160,6 +174,80 @@ export default function AdminPage() {
       setProductos(Array.isArray(data) ? data : []);
     } catch (e) {
       setProductos([]);
+    }
+  };
+
+  const cargarConfigFidelidad = async () => {
+    try {
+      const res = await fetch('/api/admin/config-fidelidad');
+      const data = await res.json();
+      setConfigFidelidad(data.error ? {} : data);
+    } catch (e) {
+      setConfigFidelidad({});
+    }
+  };
+
+  const cargarRecompensas = async () => {
+    try {
+      const res = await fetch('/api/admin/recompensas');
+      const data = await res.json();
+      setRecompensas(Array.isArray(data) ? data : []);
+    } catch (e) {
+      setRecompensas([]);
+    }
+  };
+
+  const cargarCanjes = async () => {
+    try {
+      const res = await fetch('/api/admin/canjes');
+      const data = await res.json();
+      setCanjes(Array.isArray(data) ? data : []);
+    } catch (e) {
+      setCanjes([]);
+    }
+  };
+
+  const actualizarConfigFidelidad = async (clave, valor) => {
+    try {
+      const res = await fetch('/api/admin/config-fidelidad', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ clave, valor })
+      });
+      if (res.ok) {
+        cargarConfigFidelidad();
+      }
+    } catch (e) {
+      console.error('Error actualizando config:', e);
+    }
+  };
+
+  const guardarRecompensa = async (recompensa) => {
+    try {
+      const method = recompensa.id ? 'PUT' : 'POST';
+      const res = await fetch('/api/admin/recompensas', {
+        method,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(recompensa)
+      });
+      if (res.ok) {
+        cargarRecompensas();
+        setModal({ abierto: false, tipo: null, item: null });
+      }
+    } catch (e) {
+      console.error('Error guardando recompensa:', e);
+    }
+  };
+
+  const eliminarRecompensa = async (id) => {
+    if (!confirm('¿Eliminar esta recompensa?')) return;
+    try {
+      const res = await fetch(`/api/admin/recompensas?id=${id}`, { method: 'DELETE' });
+      if (res.ok) {
+        cargarRecompensas();
+      }
+    } catch (e) {
+      console.error('Error eliminando recompensa:', e);
     }
   };
 
@@ -370,6 +458,7 @@ export default function AdminPage() {
                 { id: 'cupones', nombre: 'Cupones', emoji: '🎟️' },
                 { id: 'banners', nombre: 'Banners', emoji: '🖼️' },
                 { id: 'clientes', nombre: 'Clientes', emoji: '👥' },
+                { id: 'fidelizacion', nombre: 'Fidelización', emoji: '⭐' },
                 { id: 'tiendas', nombre: 'Tiendas', emoji: '🏪' },
               ].map((item) => (
                 <button
@@ -613,6 +702,217 @@ export default function AdminPage() {
                         ))}
                       </tbody>
                     </table>
+                  </div>
+                )}
+              </div>
+            ) : seccion === 'fidelizacion' ? (
+              /* Vista de Fidelización */
+              <div className="bg-white rounded-xl shadow-lg p-6">
+                <h2 className="text-2xl font-bold text-[#3d2314] mb-6">⭐ Sistema de Fidelización</h2>
+
+                {/* Tabs */}
+                <div className="flex gap-2 mb-6 border-b">
+                  {[
+                    { id: 'config', nombre: 'Configuración', emoji: '⚙️' },
+                    { id: 'recompensas', nombre: 'Recompensas', emoji: '🎁' },
+                    { id: 'canjes', nombre: 'Canjes', emoji: '🎟️' },
+                  ].map(tab => (
+                    <button
+                      key={tab.id}
+                      onClick={() => setSubTabFidelidad(tab.id)}
+                      className={`px-4 py-2 font-medium transition-colors ${
+                        subTabFidelidad === tab.id
+                          ? 'border-b-2 border-[#4a9b8c] text-[#4a9b8c]'
+                          : 'text-gray-500 hover:text-gray-700'
+                      }`}
+                    >
+                      {tab.emoji} {tab.nombre}
+                    </button>
+                  ))}
+                </div>
+
+                {/* Tab: Configuración */}
+                {subTabFidelidad === 'config' && (
+                  <div className="space-y-4">
+                    <p className="text-gray-600 mb-4">Configura los parámetros del programa de puntos</p>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {[
+                        { clave: 'puntos_por_sol', label: 'Puntos por cada S/1 gastado', tipo: 'number' },
+                        { clave: 'bonus_bienvenida', label: 'Bonus de bienvenida (puntos)', tipo: 'number' },
+                        { clave: 'bonus_cumpleanos', label: 'Bonus de cumpleaños (puntos)', tipo: 'number' },
+                        { clave: 'dias_expiracion_canje', label: 'Días para usar recompensa', tipo: 'number' },
+                      ].map(config => (
+                        <div key={config.clave} className="bg-gray-50 p-4 rounded-lg">
+                          <label className="block text-sm font-medium text-gray-700 mb-2">
+                            {config.label}
+                          </label>
+                          <div className="flex gap-2">
+                            <input
+                              type={config.tipo}
+                              value={configFidelidad[config.clave]?.valor || ''}
+                              onChange={(e) => {
+                                setConfigFidelidad(prev => ({
+                                  ...prev,
+                                  [config.clave]: { ...prev[config.clave], valor: e.target.value }
+                                }));
+                              }}
+                              className="flex-1 px-3 py-2 border rounded-lg focus:border-[#4a9b8c] focus:outline-none"
+                            />
+                            <button
+                              onClick={() => actualizarConfigFidelidad(config.clave, configFidelidad[config.clave]?.valor)}
+                              className="px-4 py-2 bg-[#4a9b8c] text-white rounded-lg hover:bg-[#3d8577]"
+                            >
+                              Guardar
+                            </button>
+                          </div>
+                          {configFidelidad[config.clave]?.descripcion && (
+                            <p className="text-xs text-gray-500 mt-1">{configFidelidad[config.clave].descripcion}</p>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Tab: Recompensas */}
+                {subTabFidelidad === 'recompensas' && (
+                  <div>
+                    <div className="flex justify-between items-center mb-4">
+                      <p className="text-gray-600">Catálogo de recompensas canjeables</p>
+                      <button
+                        onClick={() => setModal({ abierto: true, tipo: 'recompensa', item: null })}
+                        className="px-4 py-2 bg-[#4a9b8c] text-white rounded-lg hover:bg-[#3d8577]"
+                      >
+                        + Nueva Recompensa
+                      </button>
+                    </div>
+                    <div className="overflow-x-auto">
+                      <table className="w-full">
+                        <thead className="bg-gray-50">
+                          <tr>
+                            <th className="text-left py-3 px-4">Recompensa</th>
+                            <th className="text-left py-3 px-4">Tipo</th>
+                            <th className="text-left py-3 px-4">Puntos</th>
+                            <th className="text-left py-3 px-4">Valor</th>
+                            <th className="text-left py-3 px-4">Estado</th>
+                            <th className="text-left py-3 px-4">Acciones</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {recompensas.map(rec => (
+                            <tr key={rec.id} className="border-b hover:bg-gray-50">
+                              <td className="py-3 px-4">
+                                <div className="flex items-center gap-2">
+                                  <span className="text-xl">{rec.imagen || '🎁'}</span>
+                                  <div>
+                                    <div className="font-medium">{rec.nombre}</div>
+                                    {rec.descripcion && <div className="text-xs text-gray-500">{rec.descripcion}</div>}
+                                  </div>
+                                </div>
+                              </td>
+                              <td className="py-3 px-4">
+                                <span className={`px-2 py-1 rounded text-xs ${
+                                  rec.tipo === 'producto_gratis' ? 'bg-green-100 text-green-700' :
+                                  rec.tipo === 'descuento_porcentaje' ? 'bg-blue-100 text-blue-700' :
+                                  'bg-purple-100 text-purple-700'
+                                }`}>
+                                  {rec.tipo === 'producto_gratis' ? 'Producto gratis' :
+                                   rec.tipo === 'descuento_porcentaje' ? 'Descuento %' : 'Descuento fijo'}
+                                </span>
+                              </td>
+                              <td className="py-3 px-4 font-medium">{rec.puntos_requeridos} pts</td>
+                              <td className="py-3 px-4">
+                                {rec.tipo === 'descuento_porcentaje' ? `${rec.valor}%` :
+                                 rec.tipo === 'descuento_monto' ? `S/${rec.valor}` : '-'}
+                              </td>
+                              <td className="py-3 px-4">
+                                <span className={`px-2 py-1 rounded text-xs ${
+                                  rec.activo ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
+                                }`}>
+                                  {rec.activo ? 'Activo' : 'Inactivo'}
+                                </span>
+                              </td>
+                              <td className="py-3 px-4">
+                                <div className="flex gap-2">
+                                  <button
+                                    onClick={() => setModal({ abierto: true, tipo: 'recompensa', item: rec })}
+                                    className="text-blue-600 hover:text-blue-800"
+                                  >
+                                    Editar
+                                  </button>
+                                  <button
+                                    onClick={() => eliminarRecompensa(rec.id)}
+                                    className="text-red-600 hover:text-red-800"
+                                  >
+                                    Eliminar
+                                  </button>
+                                </div>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                )}
+
+                {/* Tab: Canjes */}
+                {subTabFidelidad === 'canjes' && (
+                  <div>
+                    <p className="text-gray-600 mb-4">Historial de canjes de recompensas</p>
+                    <div className="overflow-x-auto">
+                      <table className="w-full">
+                        <thead className="bg-gray-50">
+                          <tr>
+                            <th className="text-left py-3 px-4">Fecha</th>
+                            <th className="text-left py-3 px-4">Cliente</th>
+                            <th className="text-left py-3 px-4">Recompensa</th>
+                            <th className="text-left py-3 px-4">Puntos</th>
+                            <th className="text-left py-3 px-4">Código</th>
+                            <th className="text-left py-3 px-4">Estado</th>
+                            <th className="text-left py-3 px-4">Expira</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {canjes.map(canje => (
+                            <tr key={canje.id} className="border-b hover:bg-gray-50">
+                              <td className="py-3 px-4 text-sm">
+                                {new Date(canje.fecha_canje).toLocaleDateString('es-PE')}
+                              </td>
+                              <td className="py-3 px-4">
+                                <div className="font-medium">{canje.cliente?.nombre || '-'}</div>
+                                <div className="text-xs text-gray-500">{canje.cliente?.telefono}</div>
+                              </td>
+                              <td className="py-3 px-4">{canje.recompensa?.nombre || '-'}</td>
+                              <td className="py-3 px-4 font-medium">{canje.puntos_usados} pts</td>
+                              <td className="py-3 px-4">
+                                <code className="bg-gray-100 px-2 py-1 rounded text-sm">{canje.codigo_canje}</code>
+                              </td>
+                              <td className="py-3 px-4">
+                                <span className={`px-2 py-1 rounded text-xs ${
+                                  canje.estado === 'pendiente' ? 'bg-yellow-100 text-yellow-700' :
+                                  canje.estado === 'usado' ? 'bg-green-100 text-green-700' :
+                                  'bg-red-100 text-red-700'
+                                }`}>
+                                  {canje.estado === 'pendiente' ? 'Pendiente' :
+                                   canje.estado === 'usado' ? 'Usado' : 'Expirado'}
+                                </span>
+                              </td>
+                              <td className="py-3 px-4 text-sm text-gray-500">
+                                {canje.fecha_expiracion ? new Date(canje.fecha_expiracion).toLocaleDateString('es-PE') : '-'}
+                              </td>
+                            </tr>
+                          ))}
+                          {canjes.length === 0 && (
+                            <tr>
+                              <td colSpan="7" className="py-8 text-center text-gray-500">
+                                No hay canjes registrados
+                              </td>
+                            </tr>
+                          )}
+                        </tbody>
+                      </table>
+                    </div>
                   </div>
                 )}
               </div>
@@ -1025,7 +1325,7 @@ export default function AdminPage() {
       </div>
 
       {/* Vista de edición (reemplaza contenido en móvil) */}
-      {modal.abierto && (
+      {modal.abierto && modal.tipo !== 'recompensa' && (
         <div className="fixed inset-0 bg-white z-50 overflow-auto lg:bg-black/50 lg:flex lg:items-center lg:justify-center lg:p-4">
           <div className="bg-white w-full lg:max-w-lg lg:rounded-xl lg:max-h-[90vh] lg:overflow-auto">
             <FormularioEdicion
@@ -1035,6 +1335,19 @@ export default function AdminPage() {
               tiendas={tiendas}
               productos={productos}
               onGuardar={guardarItem}
+              onCerrar={() => setModal({ abierto: false, tipo: null, item: null })}
+            />
+          </div>
+        </div>
+      )}
+
+      {/* Modal de Recompensa */}
+      {modal.abierto && modal.tipo === 'recompensa' && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+          <div className="bg-white w-full max-w-lg rounded-xl overflow-auto max-h-[90vh]">
+            <FormularioRecompensa
+              item={modal.item}
+              onGuardar={guardarRecompensa}
               onCerrar={() => setModal({ abierto: false, tipo: null, item: null })}
             />
           </div>
@@ -1549,5 +1862,189 @@ function FormularioEdicion({ seccion, item, categorias, tiendas, productos = [],
         </form>
       </div>
     </>
+  );
+}
+
+// Formulario para Recompensas
+function FormularioRecompensa({ item, onGuardar, onCerrar }) {
+  const [formData, setFormData] = useState({
+    nombre: item?.nombre || '',
+    descripcion: item?.descripcion || '',
+    tipo: item?.tipo || 'producto_gratis',
+    puntos_requeridos: item?.puntos_requeridos || 100,
+    valor: item?.valor || '',
+    imagen: item?.imagen || '🎁',
+    activo: item?.activo !== false,
+    stock: item?.stock || '',
+    fecha_inicio: item?.fecha_inicio || '',
+    fecha_fin: item?.fecha_fin || '',
+    ...(item?.id && { id: item.id })
+  });
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    const dataToSave = {
+      ...formData,
+      puntos_requeridos: Number(formData.puntos_requeridos),
+      valor: formData.valor ? Number(formData.valor) : null,
+      stock: formData.stock ? Number(formData.stock) : null,
+      fecha_inicio: formData.fecha_inicio || null,
+      fecha_fin: formData.fecha_fin || null
+    };
+    onGuardar(dataToSave);
+  };
+
+  return (
+    <div className="p-6">
+      <div className="flex justify-between items-center mb-6">
+        <h3 className="text-xl font-bold text-[#3d2314]">
+          {item?.id ? 'Editar Recompensa' : 'Nueva Recompensa'}
+        </h3>
+        <button onClick={onCerrar} className="text-gray-500 hover:text-gray-700 text-2xl">×</button>
+      </div>
+
+      <form onSubmit={handleSubmit} className="space-y-4">
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">Nombre *</label>
+          <input
+            type="text"
+            value={formData.nombre}
+            onChange={(e) => setFormData({ ...formData, nombre: e.target.value })}
+            required
+            className="w-full px-3 py-2 border rounded-lg focus:border-[#4a9b8c] focus:outline-none"
+            placeholder="Ej: Helado Simple Gratis"
+          />
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">Descripción</label>
+          <textarea
+            value={formData.descripcion}
+            onChange={(e) => setFormData({ ...formData, descripcion: e.target.value })}
+            className="w-full px-3 py-2 border rounded-lg focus:border-[#4a9b8c] focus:outline-none"
+            placeholder="Descripción de la recompensa"
+            rows={2}
+          />
+        </div>
+
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Tipo *</label>
+            <select
+              value={formData.tipo}
+              onChange={(e) => setFormData({ ...formData, tipo: e.target.value })}
+              className="w-full px-3 py-2 border rounded-lg focus:border-[#4a9b8c] focus:outline-none"
+            >
+              <option value="producto_gratis">Producto gratis</option>
+              <option value="descuento_porcentaje">Descuento %</option>
+              <option value="descuento_monto">Descuento monto fijo</option>
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Puntos requeridos *</label>
+            <input
+              type="number"
+              value={formData.puntos_requeridos}
+              onChange={(e) => setFormData({ ...formData, puntos_requeridos: e.target.value })}
+              required
+              min={1}
+              className="w-full px-3 py-2 border rounded-lg focus:border-[#4a9b8c] focus:outline-none"
+            />
+          </div>
+        </div>
+
+        {formData.tipo !== 'producto_gratis' && (
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              {formData.tipo === 'descuento_porcentaje' ? 'Porcentaje de descuento' : 'Monto de descuento (S/)'}
+            </label>
+            <input
+              type="number"
+              value={formData.valor}
+              onChange={(e) => setFormData({ ...formData, valor: e.target.value })}
+              min={1}
+              className="w-full px-3 py-2 border rounded-lg focus:border-[#4a9b8c] focus:outline-none"
+              placeholder={formData.tipo === 'descuento_porcentaje' ? 'Ej: 10' : 'Ej: 20'}
+            />
+          </div>
+        )}
+
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Emoji/Imagen</label>
+            <input
+              type="text"
+              value={formData.imagen}
+              onChange={(e) => setFormData({ ...formData, imagen: e.target.value })}
+              className="w-full px-3 py-2 border rounded-lg focus:border-[#4a9b8c] focus:outline-none"
+              placeholder="🎁"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Stock (vacío = ilimitado)</label>
+            <input
+              type="number"
+              value={formData.stock}
+              onChange={(e) => setFormData({ ...formData, stock: e.target.value })}
+              min={0}
+              className="w-full px-3 py-2 border rounded-lg focus:border-[#4a9b8c] focus:outline-none"
+            />
+          </div>
+        </div>
+
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Fecha inicio</label>
+            <input
+              type="date"
+              value={formData.fecha_inicio}
+              onChange={(e) => setFormData({ ...formData, fecha_inicio: e.target.value })}
+              className="w-full px-3 py-2 border rounded-lg focus:border-[#4a9b8c] focus:outline-none"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Fecha fin</label>
+            <input
+              type="date"
+              value={formData.fecha_fin}
+              onChange={(e) => setFormData({ ...formData, fecha_fin: e.target.value })}
+              className="w-full px-3 py-2 border rounded-lg focus:border-[#4a9b8c] focus:outline-none"
+            />
+          </div>
+        </div>
+
+        <div className="flex items-center gap-2">
+          <input
+            type="checkbox"
+            id="activo"
+            checked={formData.activo}
+            onChange={(e) => setFormData({ ...formData, activo: e.target.checked })}
+            className="w-4 h-4 accent-[#4a9b8c]"
+          />
+          <label htmlFor="activo" className="text-sm font-medium text-gray-700">
+            Recompensa activa
+          </label>
+        </div>
+
+        <div className="flex gap-3 pt-4">
+          <button
+            type="button"
+            onClick={onCerrar}
+            className="flex-1 py-3 border-2 border-gray-300 rounded-lg font-medium hover:bg-gray-50"
+          >
+            Cancelar
+          </button>
+          <button
+            type="submit"
+            className="flex-1 py-3 bg-[#4a9b8c] text-white rounded-lg font-medium hover:bg-[#3d8577]"
+          >
+            Guardar
+          </button>
+        </div>
+      </form>
+    </div>
   );
 }

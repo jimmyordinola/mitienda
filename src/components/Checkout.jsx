@@ -511,15 +511,17 @@ export default function Checkout({ items, cliente, tienda, descuentoPromo = 0, o
                 type="text"
                 placeholder="Razon Social *"
                 value={razonSocial}
-                onChange={(e) => setRazonSocial(e.target.value)}
-                className="w-full px-4 py-2 border-2 rounded-xl focus:border-[#4a9b8c] focus:outline-none text-sm"
+                onChange={(e) => !nombreConsultado && setRazonSocial(e.target.value)}
+                readOnly={!!nombreConsultado}
+                className={`w-full px-4 py-2 border-2 rounded-xl focus:outline-none text-sm ${nombreConsultado ? 'bg-gray-50 text-gray-700 cursor-not-allowed' : 'focus:border-[#4a9b8c]'}`}
               />
               <input
                 type="text"
                 placeholder="Direccion Fiscal *"
                 value={direccionFiscal}
-                onChange={(e) => setDireccionFiscal(e.target.value)}
-                className="w-full px-4 py-2 border-2 rounded-xl focus:border-[#4a9b8c] focus:outline-none text-sm"
+                onChange={(e) => !nombreConsultado && setDireccionFiscal(e.target.value)}
+                readOnly={!!nombreConsultado}
+                className={`w-full px-4 py-2 border-2 rounded-xl focus:outline-none text-sm ${nombreConsultado ? 'bg-gray-50 text-gray-700 cursor-not-allowed' : 'focus:border-[#4a9b8c]'}`}
               />
             </div>
           )}

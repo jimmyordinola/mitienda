@@ -14,7 +14,9 @@ export default function Checkout({ items, cliente, tienda, descuentoPromo = 0, o
   const [cuponCodigo, setCuponCodigo] = useState('');
   const [cuponAplicado, setCuponAplicado] = useState(null);
   const [cuponesDisponibles, setCuponesDisponibles] = useState([]);
+  const [canjesPendientes, setCanjesPendientes] = useState([]);
   const [mostrarCupones, setMostrarCupones] = useState(false);
+  const [canjeAplicado, setCanjeAplicado] = useState(null);
 
   // Facturacion
   const [tipoComprobante, setTipoComprobante] = useState(2); // 2=Boleta, 1=Factura
@@ -170,6 +172,7 @@ export default function Checkout({ items, cliente, tienda, descuentoPromo = 0, o
       const res = await fetch(`/api/fidelidad?cliente_id=${cliente.id}&tienda_id=${tienda.id}`);
       const data = await res.json();
       setCuponesDisponibles(data.cupones?.vigentes || []);
+      setCanjesPendientes(data.canjes_pendientes || []);
     } catch (e) {
       console.error('Error cargando cupones:', e);
     }
@@ -179,7 +182,13 @@ export default function Checkout({ items, cliente, tienda, descuentoPromo = 0, o
 
   const subtotal = items.reduce((sum, item) => sum + ((item.precioFinal || item.precio) * item.cantidad), 0);
   const descuentoCupon = cuponAplicado ? cuponAplicado.valor : 0;
-  const total = Math.max(0, subtotal - descuentoPromo - descuentoCupon);
+  // Calcular descuento de canje de recompensa
+  const descuentoCanje = canjeAplicado ?
+    (canjeAplicado.recompensas?.tipo === 'descuento_porcentaje'
+      ? subtotal * (canjeAplicado.recompensas.valor / 100)
+      : (canjeAplicado.recompensas?.tipo === 'descuento_monto' ? canjeAplicado.recompensas.valor : 0))
+    : 0;
+  const total = Math.max(0, subtotal - descuentoPromo - descuentoCupon - descuentoCanje);
   const puntosGanar = Math.floor(total); // 1 punto por sol
 
   const aplicarCupon = (cupon) => {
@@ -191,6 +200,15 @@ export default function Checkout({ items, cliente, tienda, descuentoPromo = 0, o
   const quitarCupon = () => {
     setCuponAplicado(null);
     setCuponCodigo('');
+  };
+
+  const aplicarCanje = (canje) => {
+    setCanjeAplicado(canje);
+    setMostrarCupones(false);
+  };
+
+  const quitarCanje = () => {
+    setCanjeAplicado(null);
   };
 
   // Configurar Culqi
@@ -259,8 +277,9 @@ export default function Checkout({ items, cliente, tienda, descuentoPromo = 0, o
           tienda_id: tienda?.id,
           items,
           total: subtotal,
-          descuento: descuentoPromo,
+          descuento: descuentoPromo + descuentoCanje,
           cupon_codigo: cuponAplicado?.codigo || null,
+          canje_codigo: canjeAplicado?.codigo_canje || null,
           metodo_pago: metodoPago === 'yape' ? 'yape' : 'tarjeta',
           referencia_pago: dataCulqi.charge_id,
           horario_recojo: `${fechaSeleccionada?.label} ${fechaSeleccionada?.dia} ${fechaSeleccionada?.mes} - ${horarioRecojo}`,
@@ -436,6 +455,65 @@ export default function Checkout({ items, cliente, tienda, descuentoPromo = 0, o
             </div>
             <button
               onClick={quitarCupon}
+              className="text-red-500 hover:text-red-700"
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
+        )}
+
+        {/* Canjes de recompensas pendientes */}
+        {canjesPendientes.length > 0 && !canjeAplicado && !cuponAplicado && (
+          <div className="mb-4">
+            <button
+              onClick={() => setMostrarCupones(!mostrarCupones)}
+              className="w-full py-3 bg-yellow-50 text-yellow-700 border border-yellow-200 rounded-xl font-medium flex items-center justify-center gap-2"
+            >
+              <span>🎁</span>
+              Tienes {canjesPendientes.length} recompensa{canjesPendientes.length > 1 ? 's' : ''} para usar
+            </button>
+
+            {mostrarCupones && (
+              <div className="mt-2 space-y-2">
+                {canjesPendientes.map(canje => (
+                  <button
+                    key={canje.id}
+                    onClick={() => aplicarCanje(canje)}
+                    className="w-full p-3 bg-gradient-to-r from-yellow-500 to-yellow-600 rounded-xl text-white text-left"
+                  >
+                    <div className="flex justify-between items-center">
+                      <div>
+                        <p className="font-bold">{canje.recompensas?.nombre}</p>
+                        <p className="text-xs opacity-80">
+                          Codigo: {canje.codigo_canje}
+                          {canje.recompensas?.tipo === 'descuento_porcentaje' && ` - ${canje.recompensas.valor}% desc.`}
+                          {canje.recompensas?.tipo === 'descuento_monto' && ` - S/${canje.recompensas.valor} desc.`}
+                        </p>
+                      </div>
+                      <span className="text-2xl">+</span>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Canje aplicado */}
+        {canjeAplicado && (
+          <div className="mb-4 p-3 bg-yellow-50 border border-yellow-200 rounded-xl flex justify-between items-center">
+            <div>
+              <p className="text-yellow-700 font-medium">Recompensa aplicada</p>
+              <p className="text-sm text-yellow-600">
+                {canjeAplicado.recompensas?.nombre}
+                {canjeAplicado.recompensas?.tipo === 'descuento_porcentaje' && ` (-${canjeAplicado.recompensas.valor}%)`}
+                {canjeAplicado.recompensas?.tipo === 'descuento_monto' && ` (-S/${canjeAplicado.recompensas.valor})`}
+              </p>
+            </div>
+            <button
+              onClick={quitarCanje}
               className="text-red-500 hover:text-red-700"
             >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">

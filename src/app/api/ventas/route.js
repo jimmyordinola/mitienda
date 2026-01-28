@@ -27,6 +27,7 @@ export async function POST(request) {
     total,
     descuento = 0,
     cupon_codigo = null,
+    canje_codigo = null,
     metodo_pago = 'efectivo',
     referencia_pago = null,
     horario_recojo = null,
@@ -114,6 +115,18 @@ export async function POST(request) {
         fecha_canje: new Date().toISOString()
       })
       .eq('id', cuponUsado.id);
+  }
+
+  // Marcar canje de recompensa como usado
+  if (canje_codigo) {
+    await supabaseAdmin
+      .from('canjes_recompensas')
+      .update({
+        estado: 'usado',
+        fecha_uso: new Date().toISOString()
+      })
+      .eq('codigo_canje', canje_codigo)
+      .eq('cliente_id', cliente_id);
   }
 
   // Actualizar puntos por tienda

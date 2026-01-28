@@ -36,9 +36,16 @@ export default function Header({ cliente, carrito, tienda, onLoginClick, onLogou
             {/* Usuario */}
             {cliente ? (
               <div className="flex items-center gap-3">
+                <a
+                  href="/mi-cuenta/puntos"
+                  className="flex items-center gap-2 bg-yellow-500 text-[#3d2314] px-3 py-1.5 rounded-lg hover:bg-yellow-400 transition-colors"
+                  title="Ver mis puntos"
+                >
+                  <span>⭐</span>
+                  <span className="font-bold">{cliente.puntos || 0}</span>
+                </a>
                 <div className="text-right hidden sm:block">
                   <p className="font-semibold text-sm">{cliente.nombre.split(' ')[0]}</p>
-                  <p className="text-xs text-white/80">{cliente.puntos} pts</p>
                 </div>
                 <button
                   onClick={onLogout}

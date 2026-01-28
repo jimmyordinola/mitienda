@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 
 export default function AdminPage() {
   const [admin, setAdmin] = useState(null);
-  const [seccion, setSeccion] = useState('productos');
+  const [seccion, setSeccion] = useState('ventas');
   const [datos, setDatos] = useState([]);
   const [categorias, setCategorias] = useState([]);
   const [tiendas, setTiendas] = useState([]);
@@ -16,6 +16,10 @@ export default function AdminPage() {
   const [tiendaSeleccionada, setTiendaSeleccionada] = useState(null);
   const [productoSeleccionado, setProductoSeleccionado] = useState(null);
   const [filtro, setFiltro] = useState('');
+  const [filtroFechaDesde, setFiltroFechaDesde] = useState('');
+  const [filtroFechaHasta, setFiltroFechaHasta] = useState('');
+  const [paginaActual, setPaginaActual] = useState(1);
+  const [pedidosPorPagina] = useState(10);
   const [saboresTiendas, setSaboresTiendas] = useState({});
   const [toppingsTiendas, setToppingsTiendas] = useState({});
   const [productosTiendasMap, setProductosTiendasMap] = useState({});
@@ -76,7 +80,8 @@ export default function AdminPage() {
     try {
       const res = await fetch(`/api/admin/${seccion}`);
       const data = await res.json();
-      setDatos(data);
+      // Asegurar que datos siempre sea un array
+      setDatos(Array.isArray(data) ? data : []);
 
       // Cargar tiendas asignadas para sabores y toppings (en paralelo)
       if (seccion === 'sabores' && Array.isArray(data)) {
@@ -120,16 +125,20 @@ export default function AdminPage() {
     try {
       const res = await fetch('/api/admin/categorias');
       const data = await res.json();
-      setCategorias(data);
-    } catch (e) {}
+      setCategorias(Array.isArray(data) ? data : []);
+    } catch (e) {
+      setCategorias([]);
+    }
   };
 
   const cargarTiendas = async () => {
     try {
       const res = await fetch('/api/admin/tiendas');
       const data = await res.json();
-      setTiendas(data);
-    } catch (e) {}
+      setTiendas(Array.isArray(data) ? data : []);
+    } catch (e) {
+      setTiendas([]);
+    }
   };
 
   const cargarProductos = async () => {
@@ -340,16 +349,14 @@ export default function AdminPage() {
           <aside className="w-full lg:w-64 bg-white rounded-xl shadow-lg p-4">
             <nav className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-1 gap-2">
               {[
+                { id: 'ventas', nombre: 'Pedidos', emoji: '🧾' },
                 { id: 'productos', nombre: 'Productos', emoji: '📦' },
                 { id: 'categorias', nombre: 'Categorías', emoji: '📂' },
-                { id: 'tiendas-categorias', nombre: 'Categorías x Tienda', emoji: '🔗' },
-                { id: 'productos-tiendas', nombre: 'Productos x Tienda', emoji: '📦🏪' },
                 { id: 'sabores', nombre: 'Sabores', emoji: '🍨' },
                 { id: 'toppings', nombre: 'Toppings', emoji: '🍫' },
                 { id: 'promociones', nombre: 'Promociones', emoji: '🎉' },
                 { id: 'cupones', nombre: 'Cupones', emoji: '🎟️' },
                 { id: 'banners', nombre: 'Banners', emoji: '🖼️' },
-                { id: 'ventas', nombre: 'Pedidos', emoji: '🧾' },
                 { id: 'clientes', nombre: 'Clientes', emoji: '👥' },
                 { id: 'tiendas', nombre: 'Tiendas', emoji: '🏪' },
               ].map((item) => (
@@ -602,88 +609,228 @@ export default function AdminPage() {
               <div className="bg-white rounded-xl shadow-lg p-6">
                 <h2 className="text-2xl font-bold text-[#3d2314] mb-6">🧾 Pedidos Realizados</h2>
 
+                {/* Filtros */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6 p-4 bg-gray-50 rounded-xl">
+                  <div>
+                    <label className="block text-xs font-medium text-gray-600 mb-1">Buscar cliente</label>
+                    <input
+                      type="text"
+                      placeholder="Nombre o teléfono..."
+                      value={filtro}
+                      onChange={(e) => { setFiltro(e.target.value); setPaginaActual(1); }}
+                      className="w-full px-3 py-2 border rounded-lg text-sm focus:border-[#4a9b8c] focus:outline-none"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-600 mb-1">Desde</label>
+                    <input
+                      type="date"
+                      value={filtroFechaDesde}
+                      onChange={(e) => { setFiltroFechaDesde(e.target.value); setPaginaActual(1); }}
+                      className="w-full px-3 py-2 border rounded-lg text-sm focus:border-[#4a9b8c] focus:outline-none"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-600 mb-1">Hasta</label>
+                    <input
+                      type="date"
+                      value={filtroFechaHasta}
+                      onChange={(e) => { setFiltroFechaHasta(e.target.value); setPaginaActual(1); }}
+                      className="w-full px-3 py-2 border rounded-lg text-sm focus:border-[#4a9b8c] focus:outline-none"
+                    />
+                  </div>
+                  <div className="flex items-end">
+                    <button
+                      onClick={() => { setFiltro(''); setFiltroFechaDesde(''); setFiltroFechaHasta(''); setPaginaActual(1); }}
+                      className="w-full px-3 py-2 bg-gray-200 text-gray-700 rounded-lg text-sm hover:bg-gray-300"
+                    >
+                      Limpiar filtros
+                    </button>
+                  </div>
+                </div>
+
                 {cargando ? (
                   <div className="text-center py-12">Cargando pedidos...</div>
                 ) : !Array.isArray(datos) || datos.length === 0 ? (
                   <div className="text-center py-12 text-gray-500">No hay pedidos registrados</div>
-                ) : (
-                  <div className="space-y-4">
-                    {datos.map((venta) => (
-                      <div key={venta.id} className="border rounded-xl p-4 hover:shadow-md transition-shadow">
-                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-3">
-                          <div>
-                            <span className="font-bold text-[#3d2314]">Pedido #{venta.id}</span>
-                            <span className="ml-3 text-sm text-gray-500">
-                              {new Date(venta.created_at).toLocaleString('es-PE')}
-                            </span>
-                          </div>
-                          <div className="text-xl font-bold text-[#4a9b8c]">
-                            S/{venta.total?.toFixed(2) || '0.00'}
-                          </div>
+                ) : (() => {
+                  // Filtrar datos
+                  const datosFiltrados = datos.filter(venta => {
+                    // Filtro por texto (cliente)
+                    if (filtro) {
+                      const busqueda = filtro.toLowerCase();
+                      const coincide = venta.clientes?.nombre?.toLowerCase().includes(busqueda) ||
+                        venta.clientes?.telefono?.includes(busqueda) ||
+                        venta.id?.toString().includes(busqueda);
+                      if (!coincide) return false;
+                    }
+                    // Filtro por fecha desde
+                    if (filtroFechaDesde) {
+                      const fechaVenta = new Date(venta.created_at).toISOString().split('T')[0];
+                      if (fechaVenta < filtroFechaDesde) return false;
+                    }
+                    // Filtro por fecha hasta
+                    if (filtroFechaHasta) {
+                      const fechaVenta = new Date(venta.created_at).toISOString().split('T')[0];
+                      if (fechaVenta > filtroFechaHasta) return false;
+                    }
+                    return true;
+                  }).sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+
+                  // Paginación
+                  const totalPaginas = Math.ceil(datosFiltrados.length / pedidosPorPagina);
+                  const inicio = (paginaActual - 1) * pedidosPorPagina;
+                  const datosPaginados = datosFiltrados.slice(inicio, inicio + pedidosPorPagina);
+                  const totalVentas = datosFiltrados.reduce((sum, v) => sum + (v.total || 0), 0);
+
+                  return (
+                    <>
+                      {/* Resumen */}
+                      <div className="flex flex-wrap gap-4 mb-4 p-3 bg-[#4a9b8c]/10 rounded-lg">
+                        <div className="text-sm">
+                          <span className="text-gray-600">Total pedidos:</span>
+                          <span className="font-bold ml-1">{datosFiltrados.length}</span>
                         </div>
-
-                        {venta.clientes && (
-                          <div className="mb-3 p-2 bg-gray-50 rounded-lg">
-                            <span className="text-sm text-gray-600">👤 Cliente: </span>
-                            <span className="font-medium">{venta.clientes.nombre}</span>
-                            <span className="text-sm text-gray-500 ml-2">({venta.clientes.telefono})</span>
-                          </div>
-                        )}
-
-                        {venta.detalles && venta.detalles.length > 0 && (
-                          <div className="border-t pt-3">
-                            <p className="text-sm font-medium text-gray-600 mb-2">Productos:</p>
-                            <div className="space-y-2">
-                              {venta.detalles.map((detalle, idx) => (
-                                <div key={idx} className="flex items-center justify-between text-sm">
-                                  <div className="flex items-center gap-2">
-                                    {detalle.productos?.imagen && (
-                                      <img src={detalle.productos.imagen} alt="" className="w-8 h-8 rounded object-cover" />
-                                    )}
-                                    <span>{detalle.cantidad}x {detalle.productos?.nombre || 'Producto'}</span>
-                                  </div>
-                                  <span className="font-medium">S/{(detalle.precio_unitario * detalle.cantidad).toFixed(2)}</span>
-                                </div>
-                              ))}
-                            </div>
-                          </div>
-                        )}
-
-                        {venta.puntos_ganados > 0 && (
-                          <div className="mt-3 text-sm text-[#4a9b8c]">
-                            ⭐ +{venta.puntos_ganados} puntos ganados
-                          </div>
-                        )}
-
-                        {/* Comprobante electronico */}
-                        {venta.comprobante_pdf ? (
-                          <div className="mt-3 p-2 bg-green-50 rounded-lg flex items-center justify-between">
-                            <div className="text-sm">
-                              <span className="font-medium text-green-700">
-                                {venta.comprobante_tipo === 'factura' ? '📄 Factura' : '🧾 Boleta'}
-                              </span>
-                              <span className="text-green-600 ml-2">
-                                {venta.comprobante_serie}-{venta.comprobante_numero}
-                              </span>
-                            </div>
-                            <a
-                              href={venta.comprobante_pdf}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="px-3 py-1 bg-green-600 text-white text-sm rounded-lg hover:bg-green-700"
-                            >
-                              Ver PDF
-                            </a>
-                          </div>
-                        ) : (
-                          <div className="mt-3 p-2 bg-gray-50 rounded-lg text-sm text-gray-500">
-                            Sin comprobante electrónico
-                          </div>
-                        )}
+                        <div className="text-sm">
+                          <span className="text-gray-600">Total ventas:</span>
+                          <span className="font-bold text-[#4a9b8c] ml-1">S/{totalVentas.toFixed(2)}</span>
+                        </div>
                       </div>
-                    ))}
-                  </div>
-                )}
+
+                      {datosPaginados.length === 0 ? (
+                        <div className="text-center py-8 text-gray-500">No se encontraron pedidos con los filtros aplicados</div>
+                      ) : (
+                        <div className="space-y-4">
+                          {datosPaginados.map((venta) => (
+                            <div key={venta.id} className="border rounded-xl p-4 hover:shadow-md transition-shadow">
+                              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-3">
+                                <div>
+                                  <span className="font-bold text-[#3d2314]">Pedido #{venta.id}</span>
+                                  <span className="ml-3 text-sm text-gray-500">
+                                    {new Date(venta.created_at).toLocaleString('es-PE')}
+                                  </span>
+                                </div>
+                                <div className="text-xl font-bold text-[#4a9b8c]">
+                                  S/{venta.total?.toFixed(2) || '0.00'}
+                                </div>
+                              </div>
+
+                              {venta.clientes && (
+                                <div className="mb-3 p-2 bg-gray-50 rounded-lg">
+                                  <span className="text-sm text-gray-600">👤 Cliente: </span>
+                                  <span className="font-medium">{venta.clientes.nombre}</span>
+                                  <span className="text-sm text-gray-500 ml-2">({venta.clientes.telefono})</span>
+                                </div>
+                              )}
+
+                              {venta.detalles && venta.detalles.length > 0 && (
+                                <div className="border-t pt-3">
+                                  <p className="text-sm font-medium text-gray-600 mb-2">Productos:</p>
+                                  <div className="space-y-2">
+                                    {venta.detalles.map((detalle, idx) => (
+                                      <div key={idx} className="flex items-center justify-between text-sm bg-gray-50 p-2 rounded-lg">
+                                        <div className="flex items-center gap-3">
+                                          <div className="w-10 h-10 bg-gray-200 rounded-lg overflow-hidden flex-shrink-0">
+                                            {detalle.productos?.imagen_url ? (
+                                              <img src={detalle.productos.imagen_url} alt="" className="w-full h-full object-cover" />
+                                            ) : detalle.productos?.imagen && (detalle.productos.imagen.startsWith('http') || detalle.productos.imagen.startsWith('/')) ? (
+                                              <img src={detalle.productos.imagen} alt="" className="w-full h-full object-cover" />
+                                            ) : detalle.productos?.imagen ? (
+                                              <div className="w-full h-full flex items-center justify-center text-xl">{detalle.productos.imagen}</div>
+                                            ) : (
+                                              <div className="w-full h-full flex items-center justify-center text-gray-400">📦</div>
+                                            )}
+                                          </div>
+                                          <span className="font-medium">{detalle.cantidad}x {detalle.productos?.nombre || 'Producto'}</span>
+                                        </div>
+                                        <span className="font-bold text-[#3d2314]">S/{(detalle.precio_unitario * detalle.cantidad).toFixed(2)}</span>
+                                      </div>
+                                    ))}
+                                  </div>
+                                </div>
+                              )}
+
+                              {venta.puntos_ganados > 0 && (
+                                <div className="mt-3 text-sm text-[#4a9b8c]">
+                                  ⭐ +{venta.puntos_ganados} puntos ganados
+                                </div>
+                              )}
+
+                              {/* Comprobante electronico */}
+                              {venta.comprobante_pdf ? (
+                                <div className="mt-3 p-2 bg-green-50 rounded-lg flex items-center justify-between">
+                                  <div className="text-sm">
+                                    <span className="font-medium text-green-700">
+                                      {venta.comprobante_tipo === 'factura' ? '📄 Factura' : '🧾 Boleta'}
+                                    </span>
+                                    <span className="text-green-600 ml-2">
+                                      {venta.comprobante_serie}-{venta.comprobante_numero}
+                                    </span>
+                                  </div>
+                                  <a
+                                    href={venta.comprobante_pdf}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="px-3 py-1 bg-green-600 text-white text-sm rounded-lg hover:bg-green-700"
+                                  >
+                                    Ver PDF
+                                  </a>
+                                </div>
+                              ) : (
+                                <div className="mt-3 p-2 bg-gray-50 rounded-lg text-sm text-gray-500">
+                                  Sin comprobante electrónico
+                                </div>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      )}
+
+                      {/* Paginación */}
+                      {totalPaginas > 1 && (
+                        <div className="flex items-center justify-center gap-2 mt-6">
+                          <button
+                            onClick={() => setPaginaActual(p => Math.max(1, p - 1))}
+                            disabled={paginaActual === 1}
+                            className="px-3 py-2 border rounded-lg disabled:opacity-50 hover:bg-gray-50"
+                          >
+                            ← Anterior
+                          </button>
+                          <div className="flex gap-1">
+                            {Array.from({ length: Math.min(5, totalPaginas) }, (_, i) => {
+                              let pageNum;
+                              if (totalPaginas <= 5) {
+                                pageNum = i + 1;
+                              } else if (paginaActual <= 3) {
+                                pageNum = i + 1;
+                              } else if (paginaActual >= totalPaginas - 2) {
+                                pageNum = totalPaginas - 4 + i;
+                              } else {
+                                pageNum = paginaActual - 2 + i;
+                              }
+                              return (
+                                <button
+                                  key={pageNum}
+                                  onClick={() => setPaginaActual(pageNum)}
+                                  className={`w-10 h-10 rounded-lg ${paginaActual === pageNum ? 'bg-[#4a9b8c] text-white' : 'border hover:bg-gray-50'}`}
+                                >
+                                  {pageNum}
+                                </button>
+                              );
+                            })}
+                          </div>
+                          <button
+                            onClick={() => setPaginaActual(p => Math.min(totalPaginas, p + 1))}
+                            disabled={paginaActual === totalPaginas}
+                            className="px-3 py-2 border rounded-lg disabled:opacity-50 hover:bg-gray-50"
+                          >
+                            Siguiente →
+                          </button>
+                        </div>
+                      )}
+                    </>
+                  );
+                })()}
               </div>
             ) : (
             <div className="bg-white rounded-xl shadow-lg p-6">
@@ -708,6 +855,8 @@ export default function AdminPage() {
 
               {cargando ? (
                 <div className="text-center py-12">Cargando...</div>
+              ) : !Array.isArray(datos) || datos.length === 0 ? (
+                <div className="text-center py-12 text-gray-500">No hay datos registrados</div>
               ) : (
                 <div className="overflow-x-auto">
                   <table className="w-full">
@@ -811,7 +960,7 @@ export default function AdminPage() {
                           )}
                           {seccion === 'banners' && (
                             <td className="py-3 px-4">
-                              {item.imagen && (
+                              {item.imagen && (item.imagen.startsWith('http') || item.imagen.startsWith('/')) && (
                                 <img src={item.imagen} alt="" className="w-16 h-10 object-cover rounded" />
                               )}
                             </td>
@@ -928,6 +1077,12 @@ function FormularioEdicion({ seccion, item, categorias, tiendas, productos = [],
           if (Array.isArray(data)) {
             setTiendasSeleccionadas(data.map(pt => pt.tienda_id));
           }
+        } else if (seccion === 'categorias') {
+          const res = await fetch(`/api/admin/categorias-tiendas?categoria_id=${item.id}`);
+          const data = await res.json();
+          if (Array.isArray(data)) {
+            setTiendasSeleccionadas(data.map(ct => ct.tienda_id));
+          }
         }
       } catch (e) {
         console.error('Error cargando tiendas:', e);
@@ -1014,8 +1169,8 @@ function FormularioEdicion({ seccion, item, categorias, tiendas, productos = [],
       });
       return;
     }
-    // Para sabores, toppings y promociones, agregar tiendas_ids (puede estar vacío = global)
-    if (seccion === 'sabores' || seccion === 'toppings' || seccion === 'promociones') {
+    // Para sabores, toppings, promociones y categorias, agregar tiendas_ids (puede estar vacío = global)
+    if (seccion === 'sabores' || seccion === 'toppings' || seccion === 'promociones' || seccion === 'categorias') {
       onGuardar({
         ...formData,
         tiendas_ids: tiendasSeleccionadas
@@ -1064,6 +1219,7 @@ function FormularioEdicion({ seccion, item, categorias, tiendas, productos = [],
       { name: 'descripcion', label: 'Descripcion', type: 'textarea' },
       { name: 'emoji', label: 'Emoji', type: 'text' },
       { name: 'imagen', label: 'Imagen', type: 'image_upload' },
+      { name: 'tiendas_ids', label: 'Tiendas (vacio = todas)', type: 'tiendas_multi_select_simple' },
       { name: 'orden', label: 'Orden', type: 'number' },
       { name: 'activo', label: 'Activo', type: 'checkbox' },
     ],

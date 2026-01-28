@@ -317,10 +317,25 @@ export default function Checkout({ items, cliente, tienda, descuentoPromo = 0, o
       alert('Selecciona un horario de recojo');
       return;
     }
+    // Validar DNI para boleta (si se ingresó)
+    if (tipoComprobante === 2 && documentoCliente.length > 0) {
+      if (documentoCliente.length !== 8) {
+        alert('El DNI debe tener 8 digitos');
+        return;
+      }
+      if (!nombreConsultado) {
+        alert('El DNI ingresado no es valido o no existe');
+        return;
+      }
+    }
     // Validar datos de factura
     if (tipoComprobante === 1) {
       if (!documentoCliente || documentoCliente.length !== 11) {
         alert('Ingresa un RUC valido (11 digitos)');
+        return;
+      }
+      if (!nombreConsultado) {
+        alert('El RUC ingresado no es valido o no existe');
         return;
       }
       if (!razonSocial.trim()) {

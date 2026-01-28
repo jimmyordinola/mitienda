@@ -226,7 +226,7 @@ export default function Checkout({ items, cliente, tienda, descuentoPromo = 0, o
       lang: 'es',
       installments: false,
       paymentMethods: {
-        tarjeta: true,
+        tarjeta: metodoPago === 'tarjeta',
         yape: metodoPago === 'yape',
         bancaMovil: false,
         agente: false,

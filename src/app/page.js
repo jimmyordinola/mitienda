@@ -42,8 +42,21 @@ export default function Home() {
         localStorage.removeItem('cliente');
       }
     }
+    const carritoGuardado = localStorage.getItem('carrito');
+    if (carritoGuardado) {
+      try {
+        setCarrito(JSON.parse(carritoGuardado));
+      } catch (e) {
+        localStorage.removeItem('carrito');
+      }
+    }
     setCargandoTienda(false);
   }, []);
+
+  // Guardar carrito en localStorage cuando cambia
+  useEffect(() => {
+    localStorage.setItem('carrito', JSON.stringify(carrito));
+  }, [carrito]);
 
   // Guardar tienda en localStorage cuando cambia
   const seleccionarTienda = (tienda) => {
@@ -201,6 +214,7 @@ export default function Home() {
     setPromoAplicada(null);
     setPromociones([]);
     localStorage.removeItem('tiendaSeleccionada');
+    localStorage.removeItem('carrito');
   };
 
   return (

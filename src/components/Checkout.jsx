@@ -676,7 +676,16 @@ export default function Checkout({ items, cliente, tienda, descuentoPromo = 0, o
           </button>
           <button
             onClick={handlePagar}
-            disabled={procesando || !culqiReady || !culqiConfigurado || !horarioRecojo}
+            disabled={
+              procesando ||
+              !culqiReady ||
+              !culqiConfigurado ||
+              !horarioRecojo ||
+              errorDocumento ||
+              consultandoDoc ||
+              (tipoComprobante === 2 && documentoCliente.length === 8 && !nombreConsultado) ||
+              (tipoComprobante === 1 && (!nombreConsultado || documentoCliente.length !== 11))
+            }
             className="flex-1 py-3 bg-[#c53030] text-white rounded-xl font-bold hover:bg-[#9b2c2c] hover:scale-[1.02] transition-all disabled:opacity-50 flex items-center justify-center gap-2"
           >
             {procesando ? (

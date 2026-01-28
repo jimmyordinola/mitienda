@@ -24,7 +24,7 @@ export default function Home() {
   const [promoAplicada, setPromoAplicada] = useState(null);
   const [descuentoPromo, setDescuentoPromo] = useState(0);
 
-  // Cargar tienda guardada en localStorage al iniciar
+  // Cargar tienda y cliente guardados en localStorage al iniciar
   useEffect(() => {
     const tiendaGuardada = localStorage.getItem('tiendaSeleccionada');
     if (tiendaGuardada) {
@@ -32,6 +32,14 @@ export default function Home() {
         setTiendaSeleccionada(JSON.parse(tiendaGuardada));
       } catch (e) {
         localStorage.removeItem('tiendaSeleccionada');
+      }
+    }
+    const clienteGuardado = localStorage.getItem('cliente');
+    if (clienteGuardado) {
+      try {
+        setCliente(JSON.parse(clienteGuardado));
+      } catch (e) {
+        localStorage.removeItem('cliente');
       }
     }
     setCargandoTienda(false);
@@ -109,6 +117,7 @@ export default function Home() {
       if (res.ok) {
         const clienteData = await res.json();
         setCliente(clienteData);
+        localStorage.setItem('cliente', JSON.stringify(clienteData));
       }
     } catch (error) {
       console.error('Error vinculando cliente social:', error);
@@ -121,6 +130,7 @@ export default function Home() {
       setAuthUser(null);
     }
     setCliente(null);
+    localStorage.removeItem('cliente');
   };
 
   // Mostrar pantalla de carga mientras verifica localStorage
@@ -176,10 +186,12 @@ export default function Home() {
     setMostrarCheckout(false);
 
     if (cliente && resultado.puntos_ganados) {
-      setCliente(prev => ({
-        ...prev,
-        puntos: prev.puntos + resultado.puntos_ganados - (resultado.puntos_usados || 0)
-      }));
+      const clienteActualizado = {
+        ...cliente,
+        puntos: cliente.puntos + resultado.puntos_ganados - (resultado.puntos_usados || 0)
+      };
+      setCliente(clienteActualizado);
+      localStorage.setItem('cliente', JSON.stringify(clienteActualizado));
     }
   };
 
@@ -214,9 +226,9 @@ export default function Home() {
             </button>
             <Login
               cliente={cliente}
-              onLogin={(c) => { setCliente(c); setMostrarLogin(false); }}
+              onLogin={(c) => { setCliente(c); localStorage.setItem('cliente', JSON.stringify(c)); setMostrarLogin(false); }}
               onRegistrar={() => {}}
-              onCerrarSesion={() => setCliente(null)}
+              onCerrarSesion={() => { setCliente(null); localStorage.removeItem('cliente'); }}
             />
           </div>
         </div>

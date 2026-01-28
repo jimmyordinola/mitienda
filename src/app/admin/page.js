@@ -23,6 +23,7 @@ export default function AdminPage() {
   const [saboresTiendas, setSaboresTiendas] = useState({});
   const [toppingsTiendas, setToppingsTiendas] = useState({});
   const [productosTiendasMap, setProductosTiendasMap] = useState({});
+  const [categoriasTiendasMap, setCategoriasTiendasMap] = useState({});
 
   // Login
   const [email, setEmail] = useState('');
@@ -114,6 +115,17 @@ export default function AdminPage() {
         });
         await Promise.all(promises);
         setProductosTiendasMap(tiendasMap);
+      }
+      // Cargar tiendas asignadas para categorías (en paralelo)
+      if (seccion === 'categorias' && Array.isArray(data)) {
+        const tiendasMap = {};
+        const promises = data.map(async (categoria) => {
+          const res2 = await fetch(`/api/admin/categorias-tiendas?categoria_id=${categoria.id}`);
+          const tiendas = await res2.json();
+          tiendasMap[categoria.id] = Array.isArray(tiendas) ? tiendas.map(t => t.tienda_id) : [];
+        });
+        await Promise.all(promises);
+        setCategoriasTiendasMap(tiendasMap);
       }
     } catch (e) {
       console.error('Error cargando datos');
@@ -868,7 +880,7 @@ export default function AdminPage() {
                         {seccion === 'productos' && <th className="text-left py-3 px-4">Categoria</th>}
                         {seccion === 'productos' && <th className="text-left py-3 px-4">Personal.</th>}
                         {seccion === 'toppings' && <th className="text-left py-3 px-4">Precio</th>}
-                        {(seccion === 'sabores' || seccion === 'toppings' || seccion === 'productos') && <th className="text-left py-3 px-4">Tiendas</th>}
+                        {(seccion === 'sabores' || seccion === 'toppings' || seccion === 'productos' || seccion === 'categorias') && <th className="text-left py-3 px-4">Tiendas</th>}
                         {(seccion === 'promociones' || seccion === 'cupones') && <th className="text-left py-3 px-4">Tienda</th>}
                         {seccion === 'cupones' && <th className="text-left py-3 px-4">Codigo</th>}
                         {seccion === 'cupones' && <th className="text-left py-3 px-4">Valor</th>}
@@ -889,10 +901,11 @@ export default function AdminPage() {
                         .map((item) => {
                         const tiendaNombre = tiendas.find(t => t.id === item.tienda_id)?.nombre || 'Todas';
                         const categoriaNombre = categorias.find(c => c.id === item.categoria_id)?.nombre || item.categoria || '-';
-                        // Tiendas asignadas para sabores, toppings y productos
+                        // Tiendas asignadas para sabores, toppings, productos y categorias
                         const tiendasIds = seccion === 'sabores' ? saboresTiendas[item.id] :
                           (seccion === 'toppings' ? toppingsTiendas[item.id] :
-                          (seccion === 'productos' ? productosTiendasMap[item.id] : []));
+                          (seccion === 'productos' ? productosTiendasMap[item.id] :
+                          (seccion === 'categorias' ? categoriasTiendasMap[item.id] : [])));
                         const tiendasNombres = (tiendasIds || []).map(tid => tiendas.find(t => t.id === tid)?.nombre).filter(Boolean);
                         return (
                         <tr key={item.id} className="border-b hover:bg-gray-50">
@@ -925,7 +938,7 @@ export default function AdminPage() {
                           {seccion === 'toppings' && (
                             <td className="py-3 px-4">+S/{item.precio || 0}</td>
                           )}
-                          {(seccion === 'sabores' || seccion === 'toppings' || seccion === 'productos') && (
+                          {(seccion === 'sabores' || seccion === 'toppings' || seccion === 'productos' || seccion === 'categorias') && (
                             <td className="py-3 px-4">
                               {tiendasNombres.length > 0 ? (
                                 <div className="flex flex-wrap gap-1">

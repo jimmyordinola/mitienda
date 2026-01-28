@@ -1,15 +1,22 @@
 import { NextResponse } from 'next/server';
-import { supabase } from '@/lib/db';
+import { createClient } from '@supabase/supabase-js';
+
+// Cliente admin para bypass de RLS
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL,
+  process.env.SUPABASE_SERVICE_ROLE_KEY
+);
 
 // GET - Obtener todas las ventas con detalles
 export async function GET() {
   try {
     console.log('=== FETCHING VENTAS ===');
 
-    // Obtener ventas sin ordenar por created_at primero
+    // Obtener ventas ordenadas por fecha
     const { data: ventas, error } = await supabase
       .from('ventas')
-      .select('*');
+      .select('*')
+      .order('created_at', { ascending: false });
 
     console.log('Ventas result:', { ventas, error });
 

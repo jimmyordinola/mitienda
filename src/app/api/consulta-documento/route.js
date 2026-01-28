@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 
 const API_TOKEN = process.env.APIS_NET_PE_TOKEN;
-const API_BASE_URL = 'https://api.apis.net.pe/v2';
+const API_BASE_URL = 'https://api.apis.net.pe/v1';
 
 export async function GET(request) {
   const { searchParams } = new URL(request.url);
@@ -38,10 +38,10 @@ export async function GET(request) {
   }
 
   try {
-    // Usar token en query string (más confiable según documentación)
+    // Usar token en query string (v1 usa /dni y /ruc directamente)
     const endpoint = tipo === 'dni'
-      ? `${API_BASE_URL}/reniec/dni?numero=${numero}&token=${API_TOKEN}`
-      : `${API_BASE_URL}/sunat/ruc?numero=${numero}&token=${API_TOKEN}`;
+      ? `${API_BASE_URL}/dni?numero=${numero}&token=${API_TOKEN}`
+      : `${API_BASE_URL}/ruc?numero=${numero}&token=${API_TOKEN}`;
 
     const response = await fetch(endpoint, {
       headers: {
@@ -59,13 +59,13 @@ export async function GET(request) {
 
     const data = await response.json();
 
-    // Normalizar respuesta
+    // Normalizar respuesta (v1 devuelve 'nombre' directamente)
     if (tipo === 'dni') {
       return NextResponse.json({
         success: true,
         tipo: 'dni',
         numero: data.numeroDocumento || numero,
-        nombre: `${data.nombres || ''} ${data.apellidoPaterno || ''} ${data.apellidoMaterno || ''}`.trim(),
+        nombre: data.nombre || `${data.nombres || ''} ${data.apellidoPaterno || ''} ${data.apellidoMaterno || ''}`.trim(),
         nombres: data.nombres,
         apellidoPaterno: data.apellidoPaterno,
         apellidoMaterno: data.apellidoMaterno
@@ -75,7 +75,7 @@ export async function GET(request) {
         success: true,
         tipo: 'ruc',
         numero: data.numeroDocumento || numero,
-        razonSocial: data.razonSocial || data.nombre || '',
+        razonSocial: data.nombre || data.razonSocial || '',
         direccion: data.direccion || '',
         estado: data.estado,
         condicion: data.condicion,

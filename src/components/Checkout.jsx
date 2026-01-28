@@ -24,6 +24,7 @@ export default function Checkout({ items, cliente, tienda, descuentoPromo = 0, o
   const [emailComprobante, setEmailComprobante] = useState(cliente?.email || '');
   const [consultandoDoc, setConsultandoDoc] = useState(false);
   const [nombreConsultado, setNombreConsultado] = useState('');
+  const [errorDocumento, setErrorDocumento] = useState('');
 
   const culqiConfigurado = Boolean(process.env.NEXT_PUBLIC_CULQI_PUBLIC_KEY);
 
@@ -124,33 +125,38 @@ export default function Checkout({ items, cliente, tienda, descuentoPromo = 0, o
 
       if (documentoCliente.length !== longitudRequerida) {
         setNombreConsultado('');
+        setErrorDocumento('');
         return;
       }
 
       setConsultandoDoc(true);
+      setErrorDocumento('');
       try {
         const res = await fetch(`/api/consulta-documento?tipo=${tipo}&numero=${documentoCliente}`);
         const data = await res.json();
 
         if (data.success) {
+          setErrorDocumento('');
           if (tipo === 'dni') {
             setNombreConsultado(data.nombre);
           } else {
             setNombreConsultado(data.razonSocial);
             // Auto-rellenar campos de factura
-            if (data.razonSocial && !razonSocial) {
+            if (data.razonSocial) {
               setRazonSocial(data.razonSocial);
             }
-            if (data.direccion && !direccionFiscal) {
+            if (data.direccion) {
               setDireccionFiscal(data.direccion);
             }
           }
         } else {
           setNombreConsultado('');
+          setErrorDocumento(tipo === 'dni' ? 'DNI no encontrado' : 'RUC no encontrado');
         }
       } catch (e) {
         console.error('Error consultando documento:', e);
         setNombreConsultado('');
+        setErrorDocumento('Error al consultar');
       }
       setConsultandoDoc(false);
     };
@@ -319,12 +325,8 @@ export default function Checkout({ items, cliente, tienda, descuentoPromo = 0, o
     }
     // Validar DNI para boleta (si se ingresó)
     if (tipoComprobante === 2 && documentoCliente.length > 0) {
-      if (documentoCliente.length !== 8) {
-        alert('El DNI debe tener 8 digitos');
-        return;
-      }
-      if (!nombreConsultado) {
-        alert('El DNI ingresado no es valido o no existe');
+      if (documentoCliente.length !== 8 || errorDocumento || !nombreConsultado) {
+        alert('Corrige el DNI antes de continuar');
         return;
       }
     }
@@ -334,16 +336,8 @@ export default function Checkout({ items, cliente, tienda, descuentoPromo = 0, o
         alert('Ingresa un RUC valido (11 digitos)');
         return;
       }
-      if (!nombreConsultado) {
-        alert('El RUC ingresado no es valido o no existe');
-        return;
-      }
-      if (!razonSocial.trim()) {
-        alert('Ingresa la razon social');
-        return;
-      }
-      if (!direccionFiscal.trim()) {
-        alert('Ingresa la direccion fiscal');
+      if (errorDocumento || !nombreConsultado) {
+        alert('Corrige el RUC antes de continuar');
         return;
       }
     }
@@ -499,6 +493,9 @@ export default function Checkout({ items, cliente, tienda, descuentoPromo = 0, o
               {nombreConsultado && documentoCliente.length === 8 && (
                 <p className="text-xs text-[#4a9b8c] px-2 font-medium">{nombreConsultado}</p>
               )}
+              {errorDocumento && documentoCliente.length === 8 && (
+                <p className="text-xs text-red-500 px-2 font-medium">{errorDocumento}</p>
+              )}
             </div>
           ) : (
             <div className="space-y-2">
@@ -520,6 +517,9 @@ export default function Checkout({ items, cliente, tienda, descuentoPromo = 0, o
                 </div>
                 {nombreConsultado && documentoCliente.length === 11 && (
                   <p className="text-xs text-[#4a9b8c] px-2 font-medium">{nombreConsultado}</p>
+                )}
+                {errorDocumento && documentoCliente.length === 11 && (
+                  <p className="text-xs text-red-500 px-2 font-medium">{errorDocumento}</p>
                 )}
               </div>
               <input

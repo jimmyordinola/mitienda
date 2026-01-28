@@ -235,15 +235,50 @@ export default function MisPuntosPage() {
               </ul>
 
               <div className="mb-4">
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
                   Fecha de nacimiento (opcional, para bonus)
                 </label>
-                <input
-                  type="date"
-                  value={fechaNacimiento}
-                  onChange={(e) => setFechaNacimiento(e.target.value)}
-                  className="w-full px-4 py-2 border-2 rounded-xl focus:border-[#4a9b8c] focus:outline-none"
-                />
+                <div className="grid grid-cols-3 gap-2">
+                  <select
+                    value={fechaNacimiento.split('-')[2] || ''}
+                    onChange={(e) => {
+                      const [y, m] = fechaNacimiento.split('-');
+                      setFechaNacimiento(`${y || '2000'}-${m || '01'}-${e.target.value}`);
+                    }}
+                    className="px-3 py-2 border-2 rounded-xl focus:border-[#4a9b8c] focus:outline-none text-center"
+                  >
+                    <option value="">Día</option>
+                    {Array.from({ length: 31 }, (_, i) => i + 1).map(d => (
+                      <option key={d} value={String(d).padStart(2, '0')}>{d}</option>
+                    ))}
+                  </select>
+                  <select
+                    value={fechaNacimiento.split('-')[1] || ''}
+                    onChange={(e) => {
+                      const [y, , d] = fechaNacimiento.split('-');
+                      setFechaNacimiento(`${y || '2000'}-${e.target.value}-${d || '01'}`);
+                    }}
+                    className="px-3 py-2 border-2 rounded-xl focus:border-[#4a9b8c] focus:outline-none text-center"
+                  >
+                    <option value="">Mes</option>
+                    {['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'].map((m, i) => (
+                      <option key={i} value={String(i + 1).padStart(2, '0')}>{m}</option>
+                    ))}
+                  </select>
+                  <select
+                    value={fechaNacimiento.split('-')[0] || ''}
+                    onChange={(e) => {
+                      const [, m, d] = fechaNacimiento.split('-');
+                      setFechaNacimiento(`${e.target.value}-${m || '01'}-${d || '01'}`);
+                    }}
+                    className="px-3 py-2 border-2 rounded-xl focus:border-[#4a9b8c] focus:outline-none text-center"
+                  >
+                    <option value="">Año</option>
+                    {Array.from({ length: 100 }, (_, i) => new Date().getFullYear() - i).map(y => (
+                      <option key={y} value={y}>{y}</option>
+                    ))}
+                  </select>
+                </div>
               </div>
 
               <button

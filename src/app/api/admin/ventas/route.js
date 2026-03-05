@@ -10,71 +10,25 @@ const supabase = createClient(
 // GET - Obtener todas las ventas con detalles
 export async function GET() {
   try {
-    console.log('=== FETCHING VENTAS ===');
-
-    // Obtener ventas ordenadas por fecha
     const { data: ventas, error } = await supabase
       .from('ventas')
-      .select('*')
+      .select(`
+        *,
+        clientes:cliente_id (id, nombre, telefono),
+        detalles:venta_detalle (
+          *,
+          productos:producto_id (id, nombre, imagen)
+        )
+      `)
       .order('created_at', { ascending: false });
 
-    console.log('Ventas result:', { ventas, error });
-
     if (error) {
-      console.error('Error fetching ventas:', error);
-      return NextResponse.json({ error: error.message, debug: 'fetch_error' });
+      return NextResponse.json({ error: error.message }, { status: 500 });
     }
 
-    if (!ventas || ventas.length === 0) {
-      console.log('No ventas found');
-      return NextResponse.json({ debug: 'no_ventas', ventas: [] });
-    }
-
-    console.log('Found ventas:', ventas.length);
-
-    // Obtener detalles de cada venta con info del cliente
-    const ventasConDetalles = await Promise.all(
-      ventas.map(async (venta) => {
-        // Obtener cliente si existe
-        let cliente = null;
-        if (venta.cliente_id) {
-          const { data: clienteData } = await supabase
-            .from('clientes')
-            .select('id, nombre, telefono')
-            .eq('id', venta.cliente_id)
-            .single();
-          cliente = clienteData;
-        }
-
-        // Obtener detalles de la venta
-        const { data: detalles } = await supabase
-          .from('venta_detalle')
-          .select('*')
-          .eq('venta_id', venta.id);
-
-        // Obtener info de productos para cada detalle
-        const detallesConProducto = await Promise.all(
-          (detalles || []).map(async (detalle) => {
-            const { data: producto } = await supabase
-              .from('productos')
-              .select('id, nombre, imagen')
-              .eq('id', detalle.producto_id)
-              .single();
-            return { ...detalle, productos: producto };
-          })
-        );
-
-        return {
-          ...venta,
-          clientes: cliente,
-          detalles: detallesConProducto
-        };
-      })
-    );
-
-    return NextResponse.json(ventasConDetalles);
+    return NextResponse.json(ventas || []);
   } catch (e) {
     console.error('Error in ventas API:', e);
-    return NextResponse.json([]);
+    return NextResponse.json({ error: 'Error interno' }, { status: 500 });
   }
 }
